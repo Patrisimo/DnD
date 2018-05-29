@@ -54,8 +54,10 @@ function update(i) {
   i = parseInt(i)
   var entry = document.getElementById(i+'d').value;
   var rval = parseInt(entry);
+  console.log('Die ' + i + ' was updated to ' + rval)
   if (isNaN(rval) || rval < 1 || rval > 4) {
     document.getElementById(i+'d').value = '';
+    document.getElementById(((i%6)+1) + 'dmod').innerHTML = '';
   } else {
     document.getElementById(i+'d').value = rval
     if (rval == 1) {
@@ -243,6 +245,7 @@ window.onload = function () {
     for (var i=1;i<=6;i++) {
       checkStats(i)
       document.getElementById('buy'+statNames[i-1]).selectedIndex = 2
+      document.getElementById(i+'d').addEventListener('input', checkAll)
     }
     
 }
