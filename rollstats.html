@@ -10,34 +10,34 @@
   <h1>D&amp;D stat roller</h1>
   
   <p>The method for rolling stats involves two steps:</p>
-  <p>First, roll 1d4 six times. Any time you get a natural 1, add 1 to your next roll. Similarly, if you get a natural 4, subtract 1 from your next roll. If either of these occur on the last roll, apply the modifier to the first result. These are your base stat values.</p>
-  <p>Second, sum up the base stat values and subtract that number from 30. This is the number of <it>points</it> you have to buy additional stat values, whose costs are given in the following table.</p>
+  <p>First, roll 1d4 six times. Any time you get a natural 1, add 1 to your next roll. Similarly, if you get a natural 4, subtract 1 from your next roll. If either of these occur on the last roll, apply the modifier to the first result. Then, add 8 to each number. These are your base stat values.</p>
+  <p>Second, sum up the base stat values and subtract that number from 30. This is the number of <it>points</it> you have to change your stat values, whose costs are given in the following table.</p>
   
   <table border='1' class='center'>
   <tr>
-    <td>Stat increase</td>
+    <td>Stat change</td>
     <td>Point cost</td>
   </tr>
   <tr>
-    <td>4</td><td>-3</td>
+    <td>-4</td><td>-3</td>
   </tr>
   <tr>
-    <td>6</td><td>-2</td>
+    <td>-2</td><td>-2</td>
   </tr>
   <tr>
-    <td>8</td><td>0</td>
+    <td>0</td><td>0</td>
   </tr>
   <tr>
-    <td>10</td><td>2</td>
+    <td>2</td><td>2</td>
   <tr>
-    <td>12</td><td>5</td>
+    <td>4</td><td>5</td>
   </tr>
   <tr>
-    <td>14</td><td>9</td>
+    <td>6</td><td>9</td>
   </tr>
   </table>
   
-  <p> Obviously, you may only buy one stat increase per stat. Additionally, you may only buy one 4 and one 14 (you can buy both, or neither, as well). Finally, choosing a 4 or a 6 for your <it>Strength</it> stat is slightly more expensive, costing -2 and -1 points, respectively.</p>
+  <p> Obviously, you may only buy one stat increase per stat. Additionally, you may only buy one -4 and one +6 (you can buy both, or neither, as well). Finally, choosing a -4 or a -2 for your <it>Strength</it> stat is slightly more expensive, costing -2 and -1 points, respectively.</p>
   
   <p> If that's confusing to you, then you can also use the below to roll stats. </p>
   
@@ -65,7 +65,7 @@
       <td><input type='button', onclick='checkAll()', value='Update' class='button'></td>
     </tr>
     <tr>
-      <td>Base stat value:</td>
+      <td>Result:</td>
       <td><div id='1val'></div></td>
       <td><div id='2val'></div></td>
       <td><div id='3val'></div></td>
@@ -152,7 +152,7 @@
       <td>CHA</td>
     </tr>
     <tr>
-      <td>Base:</td>
+      <td>Base value:</td>
       <td id='baseSTR'></td>
       <td id='baseCON'></td>
       <td id='baseDEX'></td>
@@ -161,65 +161,59 @@
       <td id='baseCHA'></td>
     </tr>
     <tr>
-      <td>Buy:</td>
+      <td>Point buy:</td>
       <td><select id='buySTR', onchange='buy()'>
-        <option value='0'>---</option>
-        <option value='4'>4 (-2 P)</option>
-        <option value='6'>6 (-1 P)</option>
-        <option value='8'>8  (0 P)</option>
-        <option value='10'>10 (2 P)</option>
-        <option value='12'>12 (5 P)</option>
-        <option value='14'>14 (9 P)</option>
+        <option value='4'>-4 (-2 P)</option>
+        <option value='6'>-2 (-1 P)</option>
+        <option value='8'>0 (0 P)</option>
+        <option value='10'>2 (2 P)</option>
+        <option value='12'>4 (5 P)</option>
+        <option value='14'>6 (9 P)</option>
         </select>
       </td>
       <td><select id='buyCON', onchange='buy()'>
-        <option value='0'>---</option>
-        <option value='4'>4 (-3 P)</option>
-        <option value='6'>6 (-2 P)</option>
-        <option value='8'>8  (0 P)</option>
-        <option value='10'>10 (2 P)</option>
-        <option value='12'>12 (5 P)</option>
-        <option value='14'>14 (9 P)</option>
+        <option value='4'>-4 (-3 P)</option>
+        <option value='6'>-2 (-2 P)</option>
+        <option value='8'>0  (0 P)</option>
+        <option value='10'>2 (2 P)</option>
+        <option value='12'>4 (5 P)</option>
+        <option value='14'>6 (9 P)</option>
         </select>
       </td>
       <td><select id='buyDEX', onchange='buy()'>
-        <option value='0'>---</option>
-        <option value='4'>4 (-3 P)</option>
-        <option value='6'>6 (-2 P)</option>
-        <option value='8'>8  (0 P)</option>
-        <option value='10'>10 (2 P)</option>
-        <option value='12'>12 (5 P)</option>
-        <option value='14'>14 (9 P)</option>
+        <option value='4'>-4 (-3 P)</option>
+        <option value='6'>-2 (-2 P)</option>
+        <option value='8'>0  (0 P)</option>
+        <option value='10'>2 (2 P)</option>
+        <option value='12'>4 (5 P)</option>
+        <option value='14'>6 (9 P)</option>
         </select>
       </td>
       <td><select id='buyINT', onchange='buy()'>
-        <option value='0'>---</option>
-        <option value='4'>4 (-3 P)</option>
-        <option value='6'>6 (-2 P)</option>
-        <option value='8'>8  (0 P)</option>
-        <option value='10'>10 (2 P)</option>
-        <option value='12'>12 (5 P)</option>
-        <option value='14'>14 (9 P)</option>
+        <option value='4'>-4 (-3 P)</option>
+        <option value='6'>-2 (-2 P)</option>
+        <option value='8'>0  (0 P)</option>
+        <option value='10'>2 (2 P)</option>
+        <option value='12'>4 (5 P)</option>
+        <option value='14'>6 (9 P)</option>
         </select>
       </td>
       <td><select id='buyWIS', onchange='buy()'>
-        <option value='0'>---</option>
-        <option value='4'>4 (-3 P)</option>
-        <option value='6'>6 (-2 P)</option>
-        <option value='8'>8  (0 P)</option>
-        <option value='10'>10 (2 P)</option>
-        <option value='12'>12 (5 P)</option>
-        <option value='14'>14 (9 P)</option>
+        <option value='4'>-4 (-3 P)</option>
+        <option value='6'>-2 (-2 P)</option>
+        <option value='8'>0  (0 P)</option>
+        <option value='10'>2 (2 P)</option>
+        <option value='12'>4 (5 P)</option>
+        <option value='14'>6 (9 P)</option>
         </select>
       </td>
       <td><select id='buyCHA', onchange='buy()'>
-        <option value='0'>---</option>
-        <option value='4'>4 (-3 P)</option>
-        <option value='6'>6 (-2 P)</option>
-        <option value='8'>8  (0 P)</option>
-        <option value='10'>10 (2 P)</option>
-        <option value='12'>12 (5 P)</option>
-        <option value='14'>14 (9 P)</option>
+        <option value='4'>-4 (-3 P)</option>
+        <option value='6'>-2 (-2 P)</option>
+        <option value='8'>0  (0 P)</option>
+        <option value='10'>2 (2 P)</option>
+        <option value='12'>4 (5 P)</option>
+        <option value='14'>6 (9 P)</option>
         </select>
       </td>
     </tr>
@@ -233,7 +227,7 @@
       <td id='CHA'></td>
     <tr>
       <td>Points remaining:</td>
-      <td id='points'></td>
+      <td id='points'>---</td>
       <td><input type='button', onclick='reset2()', value='Reset', class='button'></td>
       <td id='total', hidden='true'></td>
       

@@ -35,6 +35,13 @@ function checkAll() {
   for (var i=1;i<=6;i++) {
     update(i);
   }
+  checkStats(1)
+  
+  for (var i=0;i<6;i++) {
+    document.getElementById('buy' + statNames[i]).disabled = true
+  }
+  document.getElementById('points').innerHTML = '---'
+  
   var total = 0
   for (var j=1;j<=6;j++) {
     fillStat(statNames[j-1]);
@@ -45,6 +52,12 @@ function checkAll() {
     } else
       total += amt
   }
+  
+  
+  for (var i=0;i<6;i++) {
+    document.getElementById('buy' + statNames[i]).disabled = false
+  }
+  
   document.getElementById('total').innerHTML = 30 - total
   document.getElementById('points').innerHTML = 30 - total - pointsSpent();
   buy()
@@ -54,8 +67,10 @@ function update(i) {
   i = parseInt(i)
   var entry = document.getElementById(i+'d').value;
   var rval = parseInt(entry);
+  console.log('Die ' + i + ' was updated to ' + rval)
   if (isNaN(rval) || rval < 1 || rval > 4) {
     document.getElementById(i+'d').value = '';
+    document.getElementById(((i%6)+1) + 'dmod').innerHTML = '';
   } else {
     document.getElementById(i+'d').value = rval
     if (rval == 1) {
@@ -148,7 +163,11 @@ function fillStat(stat) { // computes the entry in the 'base stat' area
   }
   if (i<=6) {
     console.log('Moving value from ' + i + 'val to base' + stat)
-    document.getElementById('base'+stat).innerHTML = document.getElementById(i+'val').innerHTML
+    var basestat = parseInt(document.getElementById(i+'val').innerHTML)+8
+    if (isNaN(basestat))
+      document.getElementById('base'+stat).innerHTML = '---'
+    else
+      document.getElementById('base'+stat).innerHTML = basestat
     updateStat(stat)
   }
 }
@@ -162,7 +181,7 @@ function updateStat(stat) { // update the value in the 'final stat' area
   var buyField = document.getElementById('buy'+stat)
   var bought = buyField.options[buyField.selectedIndex].value
   console.log('Computing total: ' + parseInt(base) + ' + ' + parseInt(bought))
-  var total = parseInt(base) + parseInt(bought)
+  var total = parseInt(base) + parseInt(bought)-8
   if (!isNaN(total)) {
     document.getElementById(stat).innerHTML = total;
   }
@@ -209,7 +228,7 @@ function buy() { // compute the updated stat value, compute remaining points, di
 
 function reset2() {
   for (var i=0;i<6;i++) {
-    document.getElementById('buy' + statNames[i]).selectedIndex = 0
+    document.getElementById('buy' + statNames[i]).selectedIndex = 2
   }
   checkAll()
 }
@@ -237,7 +256,10 @@ function pointsSpent() {
 
 window.onload = function () {
     for (var i=1;i<=6;i++) {
-      checkStats(i)
+      document.getElementById('buy'+statNames[i-1]).selectedIndex = 2
+      document.getElementById(i+'d').addEventListener('input', checkAll)
+      document.getElementById(i+'stat').selectedIndex = i
     }
+    checkAll()
     
 }
