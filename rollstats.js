@@ -35,6 +35,13 @@ function checkAll() {
   for (var i=1;i<=6;i++) {
     update(i);
   }
+  checkStats(1)
+  
+  for (var i=0;i<6;i++) {
+    document.getElementById('buy' + statNames[i]).disabled = true
+  }
+  document.getElementById('points').innerHTML = '---'
+  
   var total = 0
   for (var j=1;j<=6;j++) {
     fillStat(statNames[j-1]);
@@ -45,6 +52,12 @@ function checkAll() {
     } else
       total += amt
   }
+  
+  
+  for (var i=0;i<6;i++) {
+    document.getElementById('buy' + statNames[i]).disabled = false
+  }
+  
   document.getElementById('total').innerHTML = 30 - total
   document.getElementById('points').innerHTML = 30 - total - pointsSpent();
   buy()
@@ -243,9 +256,10 @@ function pointsSpent() {
 
 window.onload = function () {
     for (var i=1;i<=6;i++) {
-      checkStats(i)
       document.getElementById('buy'+statNames[i-1]).selectedIndex = 2
       document.getElementById(i+'d').addEventListener('input', checkAll)
+      document.getElementById(i+'stat').selectedIndex = i
     }
+    checkAll()
     
 }
