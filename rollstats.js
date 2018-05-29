@@ -228,7 +228,7 @@ function buy() { // compute the updated stat value, compute remaining points, di
 
 function reset2() {
   for (var i=0;i<6;i++) {
-    document.getElementById('buy' + statNames[i]).selectedIndex = 0
+    document.getElementById('buy' + statNames[i]).selectedIndex = 2
   }
   checkAll()
 }
