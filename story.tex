@@ -52,8 +52,11 @@
 %%% END Article customizations
 \usepackage{hyperref}
 \usepackage{nameref}
-\newcommand{\linkto}[1]{\textbf{\nameref{#1}}}
+\usepackage{footnote}
+\usepackage{tipa}
 
+\newcommand{\linkto}[1]{\textbf{\nameref{#1}}}
+\makesavenoteenv{tabular}
 
 %%% The "real" document content comes below...
 
@@ -108,21 +111,21 @@ Recognizing the need for her halidom to heal after the trials of the Crusade, Ex
 
 \subsection{The World}
 \subsubsection{Time}
-Years in Ylisse are marked as years since the current Exalt's coronation, which always occurs on the first day of the year (although they have \textit{de facto} power as soon as their predecessor steps down), and starts counting at 1. The starting year is thus Emmeryn 3, as Exalt Emmeryn took the throne three years ago. Each year is broken into eleven months:
+Years in Ylisse are marked as years since the current Exalt's coronation, which always occurs on Ich 1 (although they have \textit{de facto} power as soon as their predecessor steps down), and starts counting at 1. For this reason, Ich 1 is also usually referred to using the current Exalt's name when not ambiguous; when referring to the current Exalt, it is typical to use their title. The starting year is thus Emmeryn 3, as Exalt Emmeryn took the throne three years ago. Each year is broken into eleven months:
 
 \begin{center}
-\begin{tabular}{c c c}
+\begin{tabular}{l l l}
 1. Ich & 2. Ket & 3. Ser \\
-4. Youn & 5. Chine & 6. Haut \\
-7. Eb & 8. Neige & 9. Kiu \\
-10. Tiz & 11. Zaun \end{tabular}
+4. Yaun\footnote{[\textipa{jon}]} & 5. Chine\footnote{[\textipa{tSAIn}]} & 6. Haut\footnote{[\textipa{hot}]} \\
+7. Eb & 8. Neige\footnote{[\textipa{neZ}]} & 9. Kyu \\
+10. Tiz & 11. Zaun\footnote{[\textipa{zon}]} \end{tabular}
 \end{center}
 
 Each month consists of four weeks, each thereof consisting of eight days, which are
 
 \begin{center}
-\begin{tabular}{c c c c}
-1. Neiged & 2. Kedd & 3. Serda & 4. Chutork \\
+\begin{tabular}{l l l l}
+1. Neiged\footnote{[\textipa{"ne.dZEd}]} & 2. Kedd & 3. Serda & 4. Chutork \\
 5. Pentek & 6. Sombat & 7. Vasarnap & 8. Honapon \end{tabular}\end{center}
 
 Days are divided into 24 hours, typically referred to in 12-hour format and disambiguated with AM/PM. Hours consist of 60 minutes, etc. 
