@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<style>
+body {
+  text-align: center;
+}
+table {
+  margin: auto;
+}
+tr {
+  height: 40px;
+}
+
+.rotate1{
+  transform: rotate(45deg);
+}
+
+.rotate2 {
+  transform: rotate(90deg);
+}
+
+.rotate3 {
+  transform: rotate(135deg);
+}
+.rotate4 {
+  transform: rotate(180deg);
+}
+.rotate5 {
+  transform: rotate(225deg);
+}
+.rotate6 {
+  transform: rotate(270deg);
+}
+.rotate7 {
+  transform: rotate(315deg);
+}
+
+select {
+  width: 75px;
+}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/rollups/aes.js"></script>
+<script>
+
+var statues = ["","♍︎⌛︎","⌛︎","⧫︎♍︎ →","←⧫︎◻︎","◆︎♌︎ →","🙵","←⧫︎","♊︎","♑︎⌧︎","←◆︎ ","⧫︎◆︎","♍︎","❖︎","♑︎♊︎ ","♊︎❖︎ →","♍︎♎︎ ","⌧︎♊︎ ","←⍓︎♑︎ ","♑︎■︎ ","■︎⧫︎ ","⍓︎♎︎ ","⧫︎ ","♑︎ ","♊︎❖︎"];
+var used = new Array(statues.length);
+used.fill(false);
+
+var dropDowns;
+var alphabet = "◻︎✿︎⌘︎⌧︎♍︎♐︎♉︎⧫︎♑︎●︎❑︎♊︎🙵■︎◆︎❍︎✇︎⍓︎❖︎⌛︎♌︎♒︎♎︎ॐ︎♏︎❒︎♈︎♓︎♋︎◇";
+
+function rotate() {
+  dropDowns = Array.from(document.getElementsByClassName('statue'));
+  dropDowns.forEach(function(dd) {
+      for (var i=0;i<statues.length;i++) {
+          var option = document.createElement("option");
+          option.text = (i>0?(i>10?(""+(i+1)+" "):(""+(i+1)+"  ")):"") + statues[i];
+          dd.add(option);
+      }
+    });
+  var option = document.createElement("option");
+  option.text = "1 " + statues[1];
+  document.getElementById('s1').add(option);
+  document.getElementById('s1').selectedIndex =0;
+  document.getElementById('s1').disabled=true;
+  document.getElementById('d1').innerHTML = statues[1];
+  //select();
+  var rows = document.getElementById('table').rows;
+  var n = rows[0].cells.length -1;
+  for (var i=0;i<15;i++) {
+    rows[i+2].cells[n].getElementsByTagName("div")[0].innerHTML = alphabet.substring(60-4*i-2, 60-4*i) + " " + alphabet.substring(60-4*i-4, 60-4*i-2);
+    console.log(alphabet.substring(4*i, 4*i+4))
+    rows[i+2].cells[0].getElementsByTagName("div")[0].innerHTML = alphabet.substring(60-4*i-4, 60-4*i-2) + " " + alphabet.substring(60-4*i-2, 60-4*i);
+  }
+}
+
+
+function select() {
+  used.fill(false)
+  dropDowns.forEach(function(dd) {
+    if (dd.selectedIndex > 0) {
+      used[dd.selectedIndex] = true;
+      document.getElementById('d'+dd.id.substring(1)).innerHTML = statues[dd.selectedIndex];
+    } else {
+      document.getElementById('d'+dd.id.substring(1)).innerHTML = "";
+    }
+  });
+  dropDowns.forEach(function(dd) {
+    Array.from(dd.options).forEach(function(op, ind) {
+      op.disabled = used[ind]
+    });
+  });
+  success();
+}
+
+function myrotate() {
+  console.log('1.8.11.14.17.12.24.21.13.19.3.6.22.15.25.5.9.16.23.20.2.4.7.10.18')
+  
+}
+
+function solve() {
+  var code = prompt("Password bataaye")
+  if (code=='khuljasimasim') {
+    place();
+  }
+  if (code=='fatherscommand') {
+    decode();
+  }
+}
+
+var solution=[1,8,11,14,17,12,24,21,13,19,3,6,22,15,25,5,9,16,23,20,2,4,7,10,18]
+
+function success() {
+  var yes=true;
+  for (var i=2;i<=25;i++) {
+    if (document.getElementById('s'+i).selectedIndex != solution[i-1]-1)
+      yes=false;
+  }
+  if (yes) {
+    document.getElementById('center1').innerHTML = 'khuljasimasim';
+  }
+}
+
+function place() {
+  for (var i=2; i<=25;i++) {
+    document.getElementById('s'+i).selectedIndex = solution[i-1]-1;
+  }
+  select()
+}
+
+var decoded = "ET H O S EW HO I NH E RI T OU RW IL LS HA L LS H IN ET HE M ID DL".split(" ")
+function decode() {
+  for (var i=0;i<25;i++) {
+    document.getElementById('d'+(i+1)).innerHTML = decoded[i];
+  }
+}
+
+
+</script>
+</head>
+
+<body onload='rotate()'>
+<p>
+	♍︎♊︎⌧︎⌧︎♑︎🙵♍︎⧫︎⌛︎♍︎■︎♑︎⧫︎❖︎♊︎♊︎◻︎⧫︎❖︎♊︎♊︎♑︎♎︎⍓︎<br>
+	      ♌︎◆︎⌛︎♑︎⍓︎♍︎⧫︎■︎♑︎◆︎⧫︎♎︎♍︎❖︎◆︎⧫︎⌛︎
+</p>
+<p>
+<button onclick="solve()">Solve</button><br>
+</p>
+<table id="table">
+<tr>
+  <td width="150px"><div class='rotate6'>&nbsp;</div></td>
+  <td></td>
+  <td></td>
+  <td>  <div id='d24'></div></td>
+  <td>  <div id='d25'></div></td>
+  <td>  <div id='d1'></div></td>
+  <td>  <div id='d2'></div></td>
+  <td>  <div id='d3'></div></td>
+  <td></td>
+  <td></td>
+	<td width="150px"><div class='rotate2'>&nbsp;</div></td>
+</tr>
+<tr>
+	<td><div class='rotate6'>&nbsp;</div></td>
+  <td></td>
+  <td></td>
+  <td>
+  <select id='s24', onchange='select()', class='statue'></select>
+  </td>
+  <td>
+
+  <select id='s25', onchange='select()', class='statue'></select></td>
+  <td>
+
+  <select id='s1', onchange='select()'></select></td>
+  <td>
+
+  <select id='s2', onchange='select()', class='statue'></select></td>
+  <td>
+
+  <select id='s3', onchange='select()', class='statue'></select></td>
+  <td></td>
+  <td></td>
+	<td><div class='rotate2'>&nbsp;</div></td>
+</tr>
+<tr>
+	<td><div class='rotate6'>&nbsp;</div></td>
+  <td></td>
+  <td>  <div class='rotate7', id='d23'>&nbsp;</div></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td>  <div class='rotate1', id='d4'>&nbsp;</div></td>
+  <td></td>
+	<td><div class='rotate2'>&nbsp;</div></td>
+</tr>
+<tr>
+	<td><div class='rotate6'>&nbsp;</div></td>
+  <td></td>
+  <td>
+
+  <select id='s23', onchange='select()', class='statue'></select>
+  </td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td>
+
+  <select id='s4', onchange='select()', class='statue'></select>
+  </td>
+  <td></td>
+	<td><div class='rotate2'>&nbsp;</div></td>
+</tr>
+<tr>
+	<td><div class='rotate6'>&nbsp;</div></td>
+  <td>  <div class='rotate6', id='d22'>&nbsp;</div>  </td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td>  <div class='rotate2', id='d5'>&nbsp;</div></td>
+	<td><div class='rotate2'>&nbsp;</div></td>
+</tr>
+<tr>
+	<td><div class='rotate6'>&nbsp;</div></td>
+  <td>
+
+  <select id='s22', onchange='select()', class='statue'></select>
+  </td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td>
+
+  <select id='s5', onchange='select()', class='statue'></select>
+  </td>
+	<td><div class='rotate2'>&nbsp;</div></td>
+</tr>
+<tr>
+	<td><div class='rotate6'>&nbsp;</div></td>
+  <td>  <div class='rotate6', id='d21'>&nbsp;</div>  </td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td>  <div class='rotate2', id='d6'>&nbsp;</div></td>
+	<td><div class='rotate2'>&nbsp;</div></td>
+</tr>
+<tr>
+	<td><div class='rotate6'>&nbsp;</div></td>
+  <td>
+
+  <select id='s21', onchange='select()', class='statue'></select>
+  </td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td>
+
+  <select id='s6', onchange='select()', class='statue'></select>
+  </td>
+	<td><div class='rotate2'>&nbsp;</div></td>
+</tr>
+<tr>
+	<td><div class='rotate6'>&nbsp;</div></td>
+  <td>  <div class='rotate6', id='d20'>&nbsp;</div>  </td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td id='center1'></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td>  <div class='rotate2', id='d7'>&nbsp;</div></td>
+	<td><div class='rotate2'>&nbsp;</div></td>
+</tr>
+<tr>
+	<td><div class='rotate6'>&nbsp;</div></td>
+  <td>
+
+  <select id='s20', onchange='select()', class='statue'></select>
+  </td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td>
+
+  <select id='s7', onchange='select()', class='statue'></select>
+  </td>
+	<td><div class='rotate2'>&nbsp;</div></td>
+</tr>
+<tr>
+	<td><div class='rotate6'>&nbsp;</div></td>
+  <td>  <div class='rotate6', id='d19'>&nbsp;</div>  </td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td>•</td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td>  <div class='rotate2', id='d8'>&nbsp;</div></td>
+	<td><div class='rotate2'>&nbsp;</div></td>
+</tr>
+<tr>
+	<td><div class='rotate6'>&nbsp;</div></td>
+  <td>
+
+  <select id='s19', onchange='select()', class='statue'></select>
+  </td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td id='center2'></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td>
+
+  <select id='s8', onchange='select()', class='statue'></select>
+  </td>
+	<td><div class='rotate2'>&nbsp;</div></td>
+</tr>
+<tr>
+	<td><div class='rotate6'>&nbsp;</div></td>
+  <td>  <div class='rotate6', id='d18'>&nbsp;</div>  </td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td>  <div class='rotate2', id='d9'>&nbsp;</div></td>
+	<td><div class='rotate2'>&nbsp;</div></td>
+</tr>
+<tr>
+	<td><div class='rotate6'>&nbsp;</div></td>
+  <td>
+
+  <select id='s18', onchange='select()', class='statue'></select>
+  </td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td>
+
+  <select id='s9', onchange='select()', class='statue'></select>
+  </td>
+	<td><div class='rotate2'>&nbsp;</div></td>
+</tr>
+<tr>
+	<td><div class='rotate6'>&nbsp;</div></td>
+  <td>  <div class='rotate6', id='d17'>&nbsp;</div>  </td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td>  <div class='rotate2', id='d10'>&nbsp;</div></td>
+	<td><div class='rotate2'>&nbsp;</div></td>
+</tr>
+<tr>
+	<td><div class='rotate6'>&nbsp;</div></td>
+  <td>
+
+  <select id='s17', onchange='select()', class='statue'></select>
+  </td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td>
+
+  <select id='s10', onchange='select()', class='statue'></select>
+  </td>
+	<td><div class='rotate2'>&nbsp;</div></td>
+</tr>
+<tr>
+	<td><div class='rotate6'>&nbsp;</div></td>
+  <td></td>
+  <td>  <div class='rotate5', id='d16'>&nbsp;</div></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td>  <div class='rotate3', id='d11'>&nbsp;</div></td>
+  <td></td>
+	<td><div class='rotate2'>&nbsp;</div></td>
+</tr>
+<tr>
+	<td><div class='rotate6'>&nbsp;</div></td>
+  <td></td>
+  <td>
+
+  <select id='s16', onchange='select()', class='statue'></select>
+  </td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td>
+
+  <select id='s11', onchange='select()', class='statue'></select>
+  </td>
+  <td></td>
+	<td><div class='rotate2'>&nbsp;</div></td>
+</tr>
+
+<tr>
+	<td><div class='rotate6'>&nbsp;</div></td>
+  <td></td>
+  <td></td>
+  <td>  <div class='rotate4', id='d15'></div></td>
+  <td>  <div class='rotate4', id='d14'></div></td>
+  <td>  </td>
+  <td>  <div class='rotate4', id='d13'></div></td>
+  <td>  <div class='rotate4', id='d12'></div></td>
+  <td></td>
+  <td></td>
+	<td><div class='rotate2'>&nbsp;</div></td>
+</tr>
+<tr>
+	<td><div class='rotate6'>&nbsp;</div></td>
+  <td></td>
+  <td></td>
+  <td>
+  <select id='s15', onchange='select()', class='statue'></select>
+  </td>
+  <td>
+
+  <select id='s14', onchange='select()', class='statue'></select></td>
+  <td></td>
+  <td>
+
+  <select id='s13', onchange='select()', class='statue'></select></td>
+  <td>
+
+  <select id='s12', onchange='select()', class='statue'></select></td>
+  <td></td>
+  <td></td>
+	<td><div class='rotate2'>&nbsp;</div></td>
+</tr>
+
+</table>
+</body>
+
+</html>

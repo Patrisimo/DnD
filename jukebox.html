@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script>
+var playing=-1;
+
+function myPlay(i) {
+  console.log('Track ' + i + ' played, pausing ' + playing)
+  if (playing >= 0)
+    document.getElementById('track' + playing).pause();
+  playing=i;
+}
+
+function start(i) {
+  el = document.getElementById('track' + i);
+  if (i == playing) 
+    myPause(i);
+  else
+    el.play();
+  console.log('Playing track ' + i)
+  
+}
+
+function myPause() {
+  el = document.getElementById('track' + playing).pause();
+  playing = -1;
+}
+</script>
+</head>
+
+<body>
+<p>
+<input type='button' onclick='myPause()' value='Pause'>
+</p>
+<table>
+<tr>
+<td> <input type="button", onclick='start(1)', name='Lobby '> </td>
+<td> <input type="button", onclick='start(2)', value='Trial'> </td>
+<td> <input type="button", onclick='start(3)', value='Cross-Examination (1)'></td>
+<td> <input type="button", onclick='start(4)', value='Thinking music'</td>
+<td> <input type="button", onclick='start(5)', value='OBJECTION'</td>
+</tr>
+<tr>
+<td> <input type="button", onclick='start(6)', value='Cross-Examination (2)'></td>
+<td> <input type="button", onclick='start(7)', value="I've got you now!"></td>
+<td> <input type="button", onclick='start(8)', value='Regal court music'></td>
+<td> <input type="button", onclick='start(9)', value='In a pinch!'></td>
+<td> <input type="button", onclick='start(10)', value="I've really got you now!"></td>
+</tr>
+</table>
+
+
+
+
+<p>01 - Ace Attorney - Prologue.mp3
+<audio controls onplay='myPlay(0)', id='track0', loop=true>
+  <source src="AceAttorney/AA1/01 - Ace Attorney - Prologue.mp3">
+</audio>
+</p>
+
+<p>02 - Courtroom Lounge ~ Beginning Prelude.mp3
+<audio controls onplay='myPlay(1)', id='track1', loop=true>
+  <source src="AceAttorney/AA1/02 - Courtroom Lounge ~ Beginning Prelude.mp3">
+</audio>
+</p>
+
+<p>03 - Ace Attorney - Trial.mp3
+<audio controls onplay='myPlay(2)', id='track2', loop=true>
+  <source src="AceAttorney/AA1/03 - Ace Attorney - Trial.mp3">
+</audio>
+</p>
+
+<p>04 - Examination ~ Moderate 2001.mp3
+<audio controls onplay='myPlay(3)', id='track3', loop=true>
+  <source src="AceAttorney/AA1/04 - Examination ~ Moderate 2001.mp3">
+</audio>
+</p>
+
+<p>05 - Logic and Trick.mp3
+<audio controls onplay='myPlay(4)', id='track4', loop=true>
+  <source src="AceAttorney/AA1/05 - Logic and Trick.mp3">
+</audio>
+</p>
+
+<p>06 - Phoenix Wright ~ Objection! 2001.mp3
+<audio controls onplay='myPlay(5)', id='track5', loop=true>
+  <source src="AceAttorney/AA1/06 - Phoenix Wright ~ Objection! 2001.mp3">
+</audio>
+</p>
+
+<p>07 - Examination ~ Allegro 2001.mp3
+<audio controls onplay='myPlay(6)', id='track6', loop=true>
+  <source src="AceAttorney/AA1/07 - Examination ~ Allegro 2001.mp3">
+</audio>
+</p>
+
+<p>08 - Investigation ~ Cornered.mp3
+<audio controls onplay='myPlay(7)', id='track7', loop=true>
+  <source src="AceAttorney/AA1/08 - Investigation ~ Cornered.mp3">
+</audio>
+</p>
+
+<p>09 - Announce the Truth 2001.mp3
+<audio controls onplay='myPlay(8)', id='track8', loop=true>
+  <source src="AceAttorney/AA1/09 - Announce the Truth 2001.mp3">
+</audio>
+</p>
+
+<p>10 - Suspense.mp3
+<audio controls onplay='myPlay(9)', id='track9', loop=true>
+  <source src="AceAttorney/AA1/10 - Suspense.mp3">
+</audio>
+</p>
+
+<p>11 - Investigation ~ Cornered (Variation).mp3
+<audio controls onplay='myPlay(10)', id='track10', loop=true>
+  <source src="AceAttorney/AA1/11 - Investigation ~ Cornered (Variation).mp3">
+</audio>
+</p>
+
+<p>12 - Jingle ~ It Doesn't End Here.mp3
+<audio controls onplay='myPlay(11)', id='track11', loop=true>
+  <source src="AceAttorney/AA1/12 - Jingle ~ It Doesn't End Here.mp3">
+</audio>
+</p>
+
+<p>13 - Search ~ Opening 2001.mp3
+<audio controls onplay='myPlay(12)', id='track12', loop=true>
+  <source src="AceAttorney/AA1/13 - Search ~ Opening 2001.mp3">
+</audio>
+</p>
+
+<p>14 - Maya Fey ~ Turnabout Sisters' Theme 2001.mp3
+<audio controls onplay='myPlay(13)', id='track13', loop=true>
+  <source src="AceAttorney/AA1/14 - Maya Fey ~ Turnabout Sisters' Theme 2001.mp3">
+</audio>
+</p>
+
+<p>15 - Detention Center ~ Jailer's Elegy.mp3
+<audio controls onplay='myPlay(14)', id='track14', loop=true>
+  <source src="AceAttorney/AA1/15 - Detention Center ~ Jailer's Elegy.mp3">
+</audio>
+</p>
+
+<p>16 - Dick Gumshoe ~ It's Detective Gumshoe.mp3
+<audio controls onplay='myPlay(15)', id='track15', loop=true>
+  <source src="AceAttorney/AA1/16 - Dick Gumshoe ~ It's Detective Gumshoe.mp3">
+</audio>
+</p>
+
+<p>17 - Reminiscence ~ Heartbroken Maya.mp3
+<audio controls onplay='myPlay(16)', id='track16', loop=true>
+  <source src="AceAttorney/AA1/17 - Reminiscence ~ Heartbroken Maya.mp3">
+</audio>
+</p>
+
+<p>18 - Marvin Grossberg ~ Age, Regret, Retribution.mp3
+<audio controls onplay='myPlay(17)', id='track17', loop=true>
+  <source src="AceAttorney/AA1/18 - Marvin Grossberg ~ Age, Regret, Retribution.mp3">
+</audio>
+</p>
+
+<p>19 - Congratulations Everybody.mp3
+<audio controls onplay='myPlay(18)', id='track18', loop=true>
+  <source src="AceAttorney/AA1/19 - Congratulations Everybody.mp3">
+</audio>
+</p>
+
+<p>20 - Reminiscence ~ Light and Shadow of The Film Studio.mp3
+<audio controls onplay='myPlay(19)', id='track19', loop=true>
+  <source src="AceAttorney/AA1/20 - Reminiscence ~ Light and Shadow of The Film Studio.mp3">
+</audio>
+</p>
+
+<p>21 - The Steel Samurai, Warrior of Neo Olde Tokyo.mp3
+<audio controls onplay='myPlay(20)', id='track20', loop=true>
+  <source src="AceAttorney/AA1/21 - The Steel Samurai, Warrior of Neo Olde Tokyo.mp3">
+</audio>
+</p>
+
+<p>22 - Reminiscence ~ Case DL-6.mp3
+<audio controls onplay='myPlay(21)', id='track21', loop=true>
+  <source src="AceAttorney/AA1/22 - Reminiscence ~ Case DL-6.mp3">
+</audio>
+</p>
+
+<p>23 - Investigation ~ Core 2001.mp3
+<audio controls onplay='myPlay(22)', id='track22', loop=true>
+  <source src="AceAttorney/AA1/23 - Investigation ~ Core 2001.mp3">
+</audio>
+</p>
+
+<p>24 - Reminiscence ~ Classroom Trial.mp3
+<audio controls onplay='myPlay(23)', id='track23', loop=true>
+  <source src="AceAttorney/AA1/24 - Reminiscence ~ Classroom Trial.mp3">
+</audio>
+</p>
+
+<p>25 - Won The Case! ~ First Victory.mp3
+<audio controls onplay='myPlay(24)', id='track24', loop=true>
+  <source src="AceAttorney/AA1/25 - Won The Case! ~ First Victory.mp3">
+</audio>
+</p>
+
+<p>26 - Ace Attorney ~ End.mp3
+<audio controls onplay='myPlay(25)', id='track25', loop=true>
+  <source src="AceAttorney/AA1/26 - Ace Attorney ~ End.mp3">
+</audio>
+</p>
+
+<p>27 - Turnabout Sisters' Ballad.mp3
+<audio controls onplay='myPlay(26)', id='track26', loop=true>
+  <source src="AceAttorney/AA1/27 - Turnabout Sisters' Ballad.mp3">
+</audio>
+</p>
+
+<p>28 - Rise From The Ashes ~ Introduction.mp3
+<audio controls onplay='myPlay(27)', id='track27', loop=true>
+  <source src="AceAttorney/AA1/28 - Rise From The Ashes ~ Introduction.mp3">
+</audio>
+</p>
+
+<p>29 - Recollection ~ SL-9 Incident.mp3
+<audio controls onplay='myPlay(28)', id='track28', loop=true>
+  <source src="AceAttorney/AA1/29 - Recollection ~ SL-9 Incident.mp3">
+</audio>
+</p>
+
+<p>30 - Ema Skye ~ Turnabout Sisters' Theme 2005.mp3
+<audio controls onplay='myPlay(29)', id='track29', loop=true>
+  <source src="AceAttorney/AA1/30 - Ema Skye ~ Turnabout Sisters' Theme 2005.mp3">
+</audio>
+</p>
+
+<p>31 - The Blue Badger ~ I Want to Protect You.mp3
+<audio controls onplay='myPlay(30)', id='track30', loop=true>
+  <source src="AceAttorney/AA1/31 - The Blue Badger ~ I Want to Protect You.mp3">
+</audio>
+</p>
+
+<p>32 - Jake Marshall ~ Vagabond Detective from the Wild West.mp3
+<audio controls onplay='myPlay(31)', id='track31', loop=true>
+  <source src="AceAttorney/AA1/32 - Jake Marshall ~ Vagabond Detective from the Wild West.mp3">
+</audio>
+</p>
+
+<p>33 - Damon Gant ~ Swimming, Anyone.mp3
+<audio controls onplay='myPlay(32)', id='track32', loop=true>
+  <source src="AceAttorney/AA1/33 - Damon Gant ~ Swimming, Anyone.mp3">
+</audio>
+</p>
+
+<p>34 - Rise From The Ashes ~ End.mp3
+<audio controls onplay='myPlay(33)', id='track33', loop=true>
+  <source src="AceAttorney/AA1/34 - Rise From The Ashes ~ End.mp3">
+</audio>
+</p>
+
+
+
+
+</body>
