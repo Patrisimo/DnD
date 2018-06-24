@@ -21,6 +21,11 @@ tr {
   transform: rotate(90deg);
 }
 
+.rhs {
+  transform: rotate(90deg)
+             scaleX(-1);
+}
+
 .rotate3 {
   transform: rotate(135deg);
 }
@@ -71,7 +76,7 @@ function rotate() {
   var rows = document.getElementById('table').rows;
   var n = rows[0].cells.length -1;
   for (var i=0;i<15;i++) {
-    rows[i+2].cells[n].getElementsByTagName("div")[0].innerHTML = alphabet.substring(60-4*i-2, 60-4*i) + " " + alphabet.substring(60-4*i-4, 60-4*i-2);
+    rows[i+2].cells[n].getElementsByTagName("div")[0].innerHTML =  alphabet.substring(60-4*i-4, 60-4*i-2) + " " + alphabet.substring(60-4*i-2, 60-4*i);
     console.log(alphabet.substring(4*i, 4*i+4))
     rows[i+2].cells[0].getElementsByTagName("div")[0].innerHTML = alphabet.substring(60-4*i-4, 60-4*i-2) + " " + alphabet.substring(60-4*i-2, 60-4*i);
   }
@@ -162,7 +167,7 @@ function decode() {
   <td>  <div id='d3'></div></td>
   <td></td>
   <td></td>
-	<td width="150px"><div class='rotate2'>&nbsp;</div></td>
+	<td width="150px"><div class='rhs'>&nbsp;</div></td>
 </tr>
 <tr>
 	<td><div class='rotate6'>&nbsp;</div></td>
@@ -185,7 +190,7 @@ function decode() {
   <select id='s3', onchange='select()', class='statue'></select></td>
   <td></td>
   <td></td>
-	<td><div class='rotate2'>&nbsp;</div></td>
+	<td><div class='rhs'>&nbsp;</div></td>
 </tr>
 <tr>
 	<td><div class='rotate6'>&nbsp;</div></td>
@@ -198,7 +203,7 @@ function decode() {
   <td></td>
   <td>  <div class='rotate1', id='d4'>&nbsp;</div></td>
   <td></td>
-	<td><div class='rotate2'>&nbsp;</div></td>
+	<td><div class='rhs'>&nbsp;</div></td>
 </tr>
 <tr>
 	<td><div class='rotate6'>&nbsp;</div></td>
@@ -217,7 +222,7 @@ function decode() {
   <select id='s4', onchange='select()', class='statue'></select>
   </td>
   <td></td>
-	<td><div class='rotate2'>&nbsp;</div></td>
+	<td><div class='rhs'>&nbsp;</div></td>
 </tr>
 <tr>
 	<td><div class='rotate6'>&nbsp;</div></td>
@@ -230,7 +235,7 @@ function decode() {
   <td></td>
   <td></td>
   <td>  <div class='rotate2', id='d5'>&nbsp;</div></td>
-	<td><div class='rotate2'>&nbsp;</div></td>
+	<td><div class='rhs'>&nbsp;</div></td>
 </tr>
 <tr>
 	<td><div class='rotate6'>&nbsp;</div></td>
@@ -249,7 +254,7 @@ function decode() {
 
   <select id='s5', onchange='select()', class='statue'></select>
   </td>
-	<td><div class='rotate2'>&nbsp;</div></td>
+	<td><div class='rhs'>&nbsp;</div></td>
 </tr>
 <tr>
 	<td><div class='rotate6'>&nbsp;</div></td>
@@ -262,7 +267,7 @@ function decode() {
   <td></td>
   <td></td>
   <td>  <div class='rotate2', id='d6'>&nbsp;</div></td>
-	<td><div class='rotate2'>&nbsp;</div></td>
+	<td><div class='rhs'>&nbsp;</div></td>
 </tr>
 <tr>
 	<td><div class='rotate6'>&nbsp;</div></td>
@@ -281,7 +286,7 @@ function decode() {
 
   <select id='s6', onchange='select()', class='statue'></select>
   </td>
-	<td><div class='rotate2'>&nbsp;</div></td>
+	<td><div class='rhs'>&nbsp;</div></td>
 </tr>
 <tr>
 	<td><div class='rotate6'>&nbsp;</div></td>
@@ -294,7 +299,7 @@ function decode() {
   <td></td>
   <td></td>
   <td>  <div class='rotate2', id='d7'>&nbsp;</div></td>
-	<td><div class='rotate2'>&nbsp;</div></td>
+	<td><div class='rhs'>&nbsp;</div></td>
 </tr>
 <tr>
 	<td><div class='rotate6'>&nbsp;</div></td>
@@ -313,7 +318,7 @@ function decode() {
 
   <select id='s7', onchange='select()', class='statue'></select>
   </td>
-	<td><div class='rotate2'>&nbsp;</div></td>
+	<td><div class='rhs'>&nbsp;</div></td>
 </tr>
 <tr>
 	<td><div class='rotate6'>&nbsp;</div></td>
@@ -326,7 +331,7 @@ function decode() {
   <td></td>
   <td></td>
   <td>  <div class='rotate2', id='d8'>&nbsp;</div></td>
-	<td><div class='rotate2'>&nbsp;</div></td>
+	<td><div class='rhs'>&nbsp;</div></td>
 </tr>
 <tr>
 	<td><div class='rotate6'>&nbsp;</div></td>
@@ -345,7 +350,7 @@ function decode() {
 
   <select id='s8', onchange='select()', class='statue'></select>
   </td>
-	<td><div class='rotate2'>&nbsp;</div></td>
+	<td><div class='rhs'>&nbsp;</div></td>
 </tr>
 <tr>
 	<td><div class='rotate6'>&nbsp;</div></td>
@@ -358,7 +363,7 @@ function decode() {
   <td></td>
   <td></td>
   <td>  <div class='rotate2', id='d9'>&nbsp;</div></td>
-	<td><div class='rotate2'>&nbsp;</div></td>
+	<td><div class='rhs'>&nbsp;</div></td>
 </tr>
 <tr>
 	<td><div class='rotate6'>&nbsp;</div></td>
@@ -377,7 +382,7 @@ function decode() {
 
   <select id='s9', onchange='select()', class='statue'></select>
   </td>
-	<td><div class='rotate2'>&nbsp;</div></td>
+	<td><div class='rhs'>&nbsp;</div></td>
 </tr>
 <tr>
 	<td><div class='rotate6'>&nbsp;</div></td>
@@ -390,7 +395,7 @@ function decode() {
   <td></td>
   <td></td>
   <td>  <div class='rotate2', id='d10'>&nbsp;</div></td>
-	<td><div class='rotate2'>&nbsp;</div></td>
+	<td><div class='rhs'>&nbsp;</div></td>
 </tr>
 <tr>
 	<td><div class='rotate6'>&nbsp;</div></td>
@@ -409,7 +414,7 @@ function decode() {
 
   <select id='s10', onchange='select()', class='statue'></select>
   </td>
-	<td><div class='rotate2'>&nbsp;</div></td>
+	<td><div class='rhs'>&nbsp;</div></td>
 </tr>
 <tr>
 	<td><div class='rotate6'>&nbsp;</div></td>
@@ -422,7 +427,7 @@ function decode() {
   <td></td>
   <td>  <div class='rotate3', id='d11'>&nbsp;</div></td>
   <td></td>
-	<td><div class='rotate2'>&nbsp;</div></td>
+	<td><div class='rhs'>&nbsp;</div></td>
 </tr>
 <tr>
 	<td><div class='rotate6'>&nbsp;</div></td>
@@ -441,7 +446,7 @@ function decode() {
   <select id='s11', onchange='select()', class='statue'></select>
   </td>
   <td></td>
-	<td><div class='rotate2'>&nbsp;</div></td>
+	<td><div class='rhs'>&nbsp;</div></td>
 </tr>
 
 <tr>
@@ -455,7 +460,7 @@ function decode() {
   <td>  <div class='rotate4', id='d12'></div></td>
   <td></td>
   <td></td>
-	<td><div class='rotate2'>&nbsp;</div></td>
+	<td><div class='rhs'>&nbsp;</div></td>
 </tr>
 <tr>
 	<td><div class='rotate6'>&nbsp;</div></td>
@@ -476,7 +481,7 @@ function decode() {
   <select id='s12', onchange='select()', class='statue'></select></td>
   <td></td>
   <td></td>
-	<td><div class='rotate2'>&nbsp;</div></td>
+	<td><div class='rhs'>&nbsp;</div></td>
 </tr>
 
 </table>
