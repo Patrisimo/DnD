@@ -55,10 +55,16 @@
 \usepackage{footnote}
 \usepackage{tipa}
 \usepackage{amsthm}
-
+\usepackage{soul}
 
 \newcommand{\linkto}[1]{\textbf{\nameref{#1}}}
 \makesavenoteenv{tabular}
+
+\usepackage{etoolbox}
+\usepackage{setspace}
+\onehalfspacing
+
+\AtBeginEnvironment{quote}{\singlespacing\small}
 
 %%% The "real" document content comes below...
 
