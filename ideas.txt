@@ -12,7 +12,7 @@ People:
 - Alexandre Calder, the mayor
 
 Restaurants:
-Whet Noodle
+Whet Noodle (in Ferox)
 Borscht Bowl Club
 Noodle Stand (run by Mr. Manny Eldoon)
 Tres Bien (coming soon (after RftA))
@@ -45,6 +45,7 @@ Boss Themes:
 Leisure music:
 -Fire Emblem Awakening: We Should Turn In For the Night
 -FEA: Agh, one got in mah mouf (comical)
+-Pokemon DPP: Bicycle
 
 Wilderness music:
 -EU4: Eire
