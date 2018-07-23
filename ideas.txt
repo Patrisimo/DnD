@@ -54,6 +54,9 @@ Wilderness music:
 Town Music:
 -FEA: Frederick, it's nearly dark!
 
+Quaint town music:
+-DPP Pokemon League (Day/Night)
+
 Suspense music:
 -FEA: Storm Clouds
 -FEA: We'd best prepare for battle, just to be safe
