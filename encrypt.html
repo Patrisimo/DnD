@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<html>
+<head>
+<style>
+body {
+  text-align: center;
+}
+</style>
+<script>
+var cypheralphabet = "◻︎✿︎⌘︎⌧︎♍︎♐︎♉︎⧫︎♑︎●︎❑︎♊︎🙵■︎◆︎❍︎✇︎⍓︎❖︎⌛︎♌︎♒︎♎︎ॐ︎♏︎❒︎♈︎♓︎♋︎◇";
+var alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+
+
+function encrypt(message, key) {
+  message = message.toUpperCase()
+  var cyphertext = new Array(message.length)
+  console.log(message)
+  for (var i=0;i<message.length;i++) {
+    if (!alphabet.includes(message.charAt(i)))
+      continue;
+    cyphertext[i] = cypheralphabet[message.charCodeAt(i) - 65]
+  }
+  return cyphertext.reverse().join("")
+}
+
+function twoSplit(s) {
+  output = new Array(Math.floor(s.length / 2))
+  for (var i=0;i<s.length; i+=2) {
+    output[Math.floor(i/2)] = s.substring(i,i+2);
+  }
+  return output;
+}
+
+cypheralphabet = twoSplit(cypheralphabet);
+
+function decrypt(cyphertext, key) {
+  cyphertext = twoSplit(cyphertext)
+  var message = new Array(cyphertext.length)
+  
+  for (var i=0;i<cyphertext.length;i++) {
+    message[i] = alphabet[cypheralphabet.indexOf(cyphertext[i])]
+    
+  }
+  return message.reverse().join("")
+}
+
+
+function first() {
+  var msg = document.getElementById("msg1");
+  var key = document.getElementById("key1");
+  var cyf = document.getElementById("cyf1");
+  cyf.value = encrypt(msg.value, key.value);
+}
+
+function second() {
+  var cyf = document.getElementById("cyf2");
+  var key = document.getElementById("key2");
+  var msg = document.getElementById("msg2");
+  msg.value = decrypt(cyf.value, key.value);
+}
+
+</script>
+
+</head>
+<body>
+<p> Message: <input type="text" id="msg1"></p>
+<p> Key: <input type="text" id="key1"></p>
+<p> <input type="button" onclick="first()" value="Encrypt"></p>
+<p> Cyphertext: <input type="text" id="cyf1"></p>
+
+<p> Cyphertext: <input type="text" id="cyf2"></p>
+<p> Key: <input type="text" id="key2"></p>
+<p> <input type="button" onclick="second()" value="Decrypt"></p>
+<p> Message: <input type="text" id="msg2"></p>
+
+</body>
+
+</html>

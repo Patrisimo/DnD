@@ -57,7 +57,11 @@ def roadTo(orig, dest, roadEndpoint, roadSpeed):
   roadVector = roadEndpoint - dest
   roadPerp = np.array([-roadVector[1], roadVector[0]])
   
-  distance = np.linalg.solve( np.vstack([roadVector, roadPerp]).T, orig-dest)
+  try:
+    distance = np.linalg.solve( np.vstack([roadVector, roadPerp]).T, orig-dest)
+  except Exception as e:
+    e.args += (orig, dest, roadEndpoint)
+    raise
   if distance[0] < 0:
     return dest, dist(orig, dest), True
   elif distance[0] > 1:
@@ -145,15 +149,16 @@ def drawCity(majorNodes, minorNodes, majorRoads, minorRoads, fname):
   for a,b in minorRoads: 
     draw.line([tuple(scale*(allNodes[a]-upperLeft)), tuple(scale*(allNodes[b]-upperLeft))], fill="brown")
   
-  for a,b in majorNodes:
+  for i,(a,b) in enumerate(majorNodes):
     x = scale*(a - upperLeft[0])
     y = scale*(b - upperLeft[1])
     draw.ellipse([(x-1,y-1), (x+1,y+1)], fill="blue")
-  for a,b in minorNodes:
+    draw.text((x,y-10), str(i), fill='black')
+  for i,(a,b) in enumerate(minorNodes, len(majorNodes)):
     x = scale*(a - upperLeft[0])
     y = scale*(b - upperLeft[1])
     draw.ellipse([(x-1,y-1), (x+1, y+1)], fill="red")
-  
+    draw.text((x,y-10), str(i), fill='black')
   img.save(fname)
   
   
@@ -166,87 +171,123 @@ def growCity(majorNodes, minorNodes, majorRoads, minorRoads, roadSpeed=10, itera
   
   adjacency, roadTraffic = makeAdjacency(allNodes, majorRoads, minorRoads, roadSpeed)
   
+  assert len(roadTraffic) == len(adjacency)
+  assert len(adjacency) == len(allNodes)
+  assert min(len(a) for a in adjacency.values()) > 0
+  assert 2*len(majorRoads) + 2*len(minorRoads) == sum(len(a) for a in adjacency.values())
+  print('Entrance sanity checks passed')
   
-  for a, orig in enumerate(majorNodes):
+  routeTime = np.infty
+  overallCost = np.infty
+  startChosen, endChosen = -1, -1
+  junctChosen = None
+  chosenIsEndpoint = False
+  roadChosen = -1
+  
+  
+  
+  
+  for a, orig in enumerate(allNodes):
     times, _ = dijkstra(a,allNodes, adjacency)
     for b, dest in enumerate(allNodes[a+1:], a+1):
       if a in adjacency[b]:
         continue
       
-      bestTime = times[b] * 0.8
-      bestCost = dist(orig,dest) + bestTime
+      bestTime = times[b]
+      bestCost = np.infty
       bestJunct = None
       bestRoad = None
       bestIsEndpoint = False
       for bRoad, bTime in adjacency[b].items():
         junct, time, isEndpoint = roadTo(orig, dest, allNodes[bRoad], bTime/dist(allNodes[bRoad], dest))
         fullTime = time + bTime * dist(junct,dest) / dist(allNodes[bRoad],dest)
-        cost = 2 * fullTime - time
+        cost = time
         if fullTime < bestTime:
           bestTime = fullTime
           bestJunct = junct
+          bestCost = cost
           bestRoad = bRoad
           bestIsEndpoint = isEndpoint
       if bestJunct is not None:
-        print('Creating new route from %d to %d' % (a,b))
-        if bestIsEndpoint:
-          if dist(orig,dest) <= dist(orig,allNodes[bestRoad]):
-            junctIndex = b
-          else:
-            junctIndex = bestRoad
-        else:
-        
-          junctIndex = len(allNodes)
-          allNodes.append(bestJunct)
-          minorNodes.append(bestJunct)
-          
-          index = -1
-          for i, road in enumerate(majorRoads):
-            if b in road and bestRoad in road:
-              index = i
-          if index >= 0:
-            majorRoads.pop(index)
-            majorRoads.append((b, junctIndex))
-            majorRoads.append((bestRoad, junctIndex))
-          else:
-            for i, road in enumerate(minorRoads):
-              if b in road and bestRoad in road:
-                index = i
-            assert index >= 0
-            minorRoads.pop(index)
-            minorRoads.append((b, junctIndex))
-            minorRoads.append((bestRoad, junctIndex))
-          allRoads.append((b, junctIndex))
-          allRoads.append((bestRoad, junctIndex))
-          adjacency[junctIndex] = {}
-          roadTraffic[junctIndex] = {}
-                  
-          oldTime = adjacency[b].pop(bestRoad)
-          adjacency[bestRoad].pop(b)
-          roadTraffic[b].pop(bestRoad)
-          roadTraffic[bestRoad].pop(b)
-          
-          adjacency[b][junctIndex] = oldTime * dist(dest,bestJunct) / dist(dest,allNodes[bestRoad])
-          adjacency[junctIndex][b] = adjacency[b][junctIndex]
-          roadTraffic[b][junctIndex] = 0
-          roadTraffic[junctIndex][b] = 0
-          
-          adjacency[bestRoad][junctIndex] = oldTime * dist(allNodes[bestRoad],bestJunct) / dist(dest,allNodes[bestRoad])
-          adjacency[junctIndex][bestRoad] = adjacency[bestRoad][junctIndex]
-          roadTraffic[bestRoad][junctIndex] = 0
-          roadTraffic[junctIndex][bestRoad] = 0
-          
-        
-        adjacency[a][junctIndex] = dist(orig, bestJunct) 
-        adjacency[junctIndex][a] = adjacency[a][ junctIndex]
-        roadTraffic[a][junctIndex] = 0
-        roadTraffic[junctIndex][a] = 0
-        minorRoads.append((a,junctIndex))
-        allRoads.append((a, junctIndex))
-        times, _ = dijkstra(a,allNodes, adjacency)
-        
-        checkIntersections(a, junctIndex, allNodes, adjacency, roadTraffic, nodePopulations)
-        
+        if bestCost < overallCost:
+          print('Connecting %d to %d would be cheap: %f' % (a,b, bestCost))
+          startChosen, endChosen = a, b
+          junctChosen = junct
+          routeTime = fullTime
+          chosenIsEndpoint = bestIsEndpoint
+          roadChosen = bestRoad
+          overallCost = bestCost
+      
+  assert len(adjacency) == len(allNodes)
+  if startChosen > -1:
+    orig = allNodes[startChosen]
+    dest = allNodes[endChosen]
+    print('Creating new route from %d to %d' % (startChosen, endChosen))
+    if chosenIsEndpoint:
+      if dist(orig,dest) <= dist(orig,allNodes[roadChosen]):
+        junctIndex = endChosen
+      else:
+        junctIndex = roadChosen
+    else:
+    
+      junctIndex = len(allNodes)
+      allNodes.append(junctChosen)
+      
+      
+      # adjacency[junctIndex] = {}
+      #roadTraffic[junctIndex] = {}
+              
+      # oldTime = adjacency[endChosen].pop(roadChosen)
+      # adjacency[roadChosen].pop(b)
+      # roadTraffic[endChosen].pop(roadChosen)
+      # roadTraffic[roadChosen].pop(b)
+      
+      # adjacency[endChosen][junctIndex] = oldTime * dist(dest,junctChosen) / dist(dest,allNodes[roadChosen])
+      # adjacency[junctIndex][endChosen] = adjacency[endChosen][junctIndex]
+      # roadTraffic[endChosen][junctIndex] = 0
+      # roadTraffic[junctIndex][endChosen] = 0
+      
+      # adjacency[roadChosen][junctIndex] = oldTime * dist(allNodes[roadChosen],junctChosen) / dist(dest,allNodes[roadChosen])
+      # adjacency[junctIndex][roadChosen] = adjacency[roadChosen][junctIndex]
+      # roadTraffic[roadChosen][junctIndex] = 0
+      # roadTraffic[junctIndex][roadChosen] = 0
+    
+    
+    # roadTraffic[startChosen][junctIndex] = 0
+    # roadTraffic[junctIndex][startChosen] = 0
+    
+    minorRoads.append((startChosen,junctIndex))
+    
+    allRoads.append((startChosen, junctIndex))
+    
+    
+    junctIndex = checkIntersections(startChosen, junctIndex, allNodes, adjacency, roadTraffic, nodePopulations)
+  
+    if not chosenIsEndpoint:
+      index = -1
+      for i, road in enumerate(majorRoads):
+        if endChosen in road and roadChosen in road:
+          index = i
+      if index >= 0:
+        majorRoads.pop(index)
+        majorRoads.append((endChosen, junctIndex))
+        majorRoads.append((roadChosen, junctIndex))
+      else:
+        for i, road in enumerate(minorRoads):
+          if b in road and roadChosen in road:
+            index = i
+        assert index >= 0
+        minorRoads.pop(index)
+        minorRoads.append((endChosen, junctIndex))
+        minorRoads.append((roadChosen, junctIndex))
+    allRoads.append((endChosen, junctIndex))
+    allRoads.append((roadChosen, junctIndex))
+    minorNodes.append(allNodes[junctIndex])
+    # adjacency[startChosen][junctIndex] = dist(orig, junctChosen) 
+    # adjacency[junctIndex][startChosen] = adjacency[startChosen][ junctIndex]
+    
+  assert len(adjacency) == len(allNodes)  
+  
   if nodePopulations is None:
     nodePopulations = [10] * len(majorNodes) + [2] * len(minorNodes)
   population = sum(nodePopulations)
@@ -271,7 +312,7 @@ def growCity(majorNodes, minorNodes, majorRoads, minorRoads, roadSpeed=10, itera
         newPopulations[layover] += travelers/2
   
   # Finally, the largest node (with fewer than five children) splits off its population to make a nearby minor node
-  largeNodes = sorted(filter(lambda y: len(adjacency[y[0]]) < 5, enumerate(newPopulations)), key=lambda x: x[1], reverse=True)[:2]
+  largeNodes = sorted(filter(lambda y: len(adjacency[y[0]]) < 5 and len(adjacency[y[0]]) > 2, enumerate(newPopulations)), key=lambda x: x[1], reverse=True)[:2]
   if len(largeNodes) > 0:
     if len(largeNodes) == 2:
       largest, nextLargest = largeNodes
@@ -288,13 +329,13 @@ def growCity(majorNodes, minorNodes, majorRoads, minorRoads, roadSpeed=10, itera
     intervals = [angles[i] - angles[i-1] for i in range(1,len(angles))]
     intervals.append( 2*np.pi - angles[-1] + angles[0])
     biggest, size = sorted(enumerate(intervals), key=lambda x: x[1], reverse=True)[0]
-    angle = angles[biggest] + size/2
+    angle = angles[biggest] + size*((1+random.random())/3)
     vector = np.array([np.cos(angle), np.sin(angle)])
     # idk put it the average distance to the nearest node far away
     scale = sum(dist(v,0) for v in vectors) / len(vectors)
     newNode = orig + scale * vector
-    ct = sum( dist(n,newNode) < 20 for n in allNodes)
-    while ct > 2:
+    ct = sum( dist(n,newNode) < 10 for n in allNodes)
+    while ct > 0:
       scale += 5
       newNode = orig + scale * vector
       ct = sum(dist(n, newNode) < 20 for n in allNodes)
@@ -302,17 +343,21 @@ def growCity(majorNodes, minorNodes, majorRoads, minorRoads, roadSpeed=10, itera
     newPopulations.append(newPop)
     allNodes.append(newNode)
     #now to connect it
+    print('New node will be at (%f,%f)' % (newNode[0], newNode[1]))
     nodeIndex = len(allNodes) -1
-    minorRoads.append((largest[0], nodeIndex))
+    otherEndpoint = checkIntersections(nodeIndex, largest[0], allNodes, adjacency, roadTraffic, newPopulations)
+    
+    minorRoads.append((otherEndpoint, nodeIndex))
     allRoads.append(minorRoads[-1])
-    adjacency[largest[0]][nodeIndex] = dist(orig, newNode)
-    adjacency[nodeIndex] = {largest[0]: dist(orig, newNode)}
-    roadTraffic[largest[0]][nodeIndex] = newPop
-    roadTraffic[nodeIndex] = {largest[0]: newPop}
-    checkIntersections(largest[0], nodeIndex, allNodes, adjacency, roadTraffic, newPopulations)
+    
+    # roadTraffic[largest[0]][nodeIndex] = newPop
+    # roadTraffic[nodeIndex] = {largest[0]: newPop}
+    
   else:
     placeRandom(allNodes, allRoads, majorRoads, minorRoads, adjacency, roadTraffic, roadSpeed)
   
+  
+  cleanMap(allNodes, newPopulations, roadTraffic)
   
   
   majorNodes = []
@@ -336,6 +381,8 @@ def growCity(majorNodes, minorNodes, majorRoads, minorRoads, roadSpeed=10, itera
   update = {i: j for i,j in updateMajor.items()}
   for i,j in updateMinor.items():
     update[i] = j + len(updateMajor)
+  for i in range(len(update),len(allNodes)):
+    update[i] = i
   allNodes = majorNodes + minorNodes
   for a in roadTraffic.keys():
     newA = update[a]
@@ -353,6 +400,15 @@ def growCity(majorNodes, minorNodes, majorRoads, minorRoads, roadSpeed=10, itera
   for i,j in update.items():
     nodePopulations[j] = newPopulations[i]
   
+  assert len(newPopulations) == len(allNodes)
+  assert len(roadTraffic) == len(allNodes)
+  assert min(len(a) for a in roadTraffic.values()) > 0
+  try:
+    assert 2*len(majorRoads) + 2*len(minorRoads) == sum(len(a) for a in roadTraffic.values())
+  except AssertionError as e:
+    e.args += ('Major roads: %d, Minor roads: %d, Road Traffic: %d' % (len(majorRoads), len(minorRoads), sum(len(a) for a in roadTraffic.values())),majorRoads, minorRoads, '\n'.join('%d: %s' % (i, ', '.join(str(s) for s in roadTraffic[i].keys())) for i in roadTraffic))
+    raise
+  print('Exit sanity checks passed')
   
   if len(forcedMajor) > 0:
     return majorNodes, minorNodes, majorRoads, minorRoads, nodePopulations, newForcedMajor
@@ -360,6 +416,8 @@ def growCity(majorNodes, minorNodes, majorRoads, minorRoads, roadSpeed=10, itera
     return majorNodes, minorNodes, majorRoads, minorRoads, nodePopulations
       
 def dijkstra(source, nodes, adjacency):
+#    print('\n'.join('%d: %s' % (i, ', '.join(str(s) for s in adjacency[i].keys())) for i in adjacency))
+    
     distances = [np.infty] * len(nodes)
     prev = [-1] * len(nodes)
     Q = set(range(len(nodes)))
@@ -372,10 +430,11 @@ def dijkstra(source, nodes, adjacency):
         if alt < distances[neighb]:
           distances[neighb] = alt
           prev[neighb] = u
-    print(prev)
+#    print(prev)
     return distances, prev
     
-def checkIntersections(end1, end2, allNodes, adjacency, roadTraffic, newPopulations, checked=None):
+def checkIntersections(end1, end2, allNodes, adjacency, roadTraffic, newPopulations, checked=None): # end1 is the existing node, end2 is the proposed node
+  print('Checking intersections between %d and %d' % (end1, end2))
   node1 = allNodes[end1]
   node2 = allNodes[end2]
   if checked is None:
@@ -383,6 +442,15 @@ def checkIntersections(end1, end2, allNodes, adjacency, roadTraffic, newPopulati
   slope = node2 - node1
   slope = slope[1] / slope[0] if slope[0] != 0 else np.infty # won't actually support vertical lines
   inter = node2[1] - slope * node2[0]
+  
+  closestIntersection = np.infty
+  closestIntersectionPoint = -1
+  closestEndpoints = (-1,-1)
+  
+  newPop = 0 if newPopulations is None else newPopulations[-1]
+  
+  
+  
   for a in adjacency:
     if a in checked or a in [end1, end2]:
       continue
@@ -397,52 +465,65 @@ def checkIntersections(end1, end2, allNodes, adjacency, roadTraffic, newPopulati
       otherInter = nodeB[1] - otherSlope * nodeB[0]
       x = - (otherInter - inter) / (otherSlope - slope) if otherSlope - slope != 0 else np.infty # parallel shouldn't be an issue
       #print('Checking whether %f is in [%f, %f] and [%f,%f]' % (x, nodeA[0], nodeB[0], node1[0], node2[0]))
-      if (nodeA[0] - x)*(nodeB[0] -x) < 0 and (node1[0] - x)*(node2[0] - x) < 0:
+      if (nodeA[0] - x)*(nodeB[0] -x) <= 1e-11 and (node1[0] - x)*(node2[0] - x) < 1e-11:
         # they intersect
         print('Intersection found between %d,%d and %d,%d' % (end1, end2, a, b))
-        newNode = np.array([x, slope*x + inter])
-        nodeIndex = len(allNodes)
-        allNodes.append(newNode)
-        newPopulations.append(0)
-        adjacency[nodeIndex] = {}
-        roadTraffic[nodeIndex] = {}
-        checked.add(nodeIndex)
-        # split this road
-        time = adjacency[end1].pop(end2)
-        adjacency[end2].pop(end1)
-        adjacency[end1][nodeIndex] = time * dist(node1, newNode) / dist(node1, node2)
-        adjacency[nodeIndex][end1] = adjacency[end1][nodeIndex]
-        adjacency[end2][nodeIndex] = time * dist(node2, newNode) / dist(node1, node2)
-        adjacency[nodeIndex][end2] = adjacency[end2][nodeIndex]
-        traffic = roadTraffic[end1].pop(end2)
-        roadTraffic[end2].pop(end1)
-        roadTraffic[end1][nodeIndex] = traffic
-        roadTraffic[nodeIndex][end1] = roadTraffic[end1][nodeIndex]
-        roadTraffic[end2][nodeIndex] = traffic
-        roadTraffic[nodeIndex][end2] = roadTraffic[end2][nodeIndex]
-        newPopulations[-1] += traffic / 2
-        # split the other road
-        
-        time = adjacency[a].pop(b)
-        adjacency[b].pop(a)
-        adjacency[a][nodeIndex] = time * dist(nodeA, newNode) / dist(nodeA, nodeB)
-        adjacency[nodeIndex][a] = adjacency[a][nodeIndex]
-        adjacency[b][nodeIndex] = time * dist(nodeB, newNode) / dist(nodeA, nodeB)
-        adjacency[nodeIndex][b] = adjacency[b][nodeIndex]
-        traffic = roadTraffic[a].pop(b)
-        roadTraffic[b].pop(a)
-        roadTraffic[a][nodeIndex] = traffic
-        roadTraffic[nodeIndex][a] = roadTraffic[a][nodeIndex]
-        roadTraffic[b][nodeIndex] = traffic
-        roadTraffic[nodeIndex][b] = roadTraffic[b][nodeIndex]
-        newPopulations[-1] += traffic / 2
-        # now need to split each of those halves
-        checkIntersections(end1, nodeIndex, allNodes, adjacency, roadTraffic, newPopulations, checked)
-        checkIntersections(end2, nodeIndex, allNodes, adjacency, roadTraffic, newPopulations, checked)
-        return
-      #else:
-        #print('it wasn\'t')
-        
+        if abs(node1[0] - x) < closestIntersection:
+          closestIntersection = abs(node1[0]- x)
+          closestIntersectionPoint = x
+          closestEndpoints = (a,b)
+  if closestIntersection < np.infty:
+    if len(adjacency.get(end2,{})) > 0:
+      newPopulations.append(0)
+    else:
+      allNodes.pop(-1)
+      
+    end2 = len(allNodes)
+    adjacency[end2] = adjacency.get(end2,{})
+    roadTraffic[end2] = roadTraffic.get(end2, {})
+    print('Edge will go from %d to %d' % (end1, end2))
+    a,b = closestEndpoints
+    nodeA, nodeB = allNodes[a], allNodes[b]
+    x = closestIntersectionPoint
+
+    newNode = np.array([x, slope*x + inter])
+    allNodes.append(newNode)
+    print('Placing node on interection point: (%f, %f)' % (newNode[0], newNode[1]))
+    checked.add(end2)
+    # split the intersection
+    
+    
+    
+    time = adjacency[a].pop(b)
+    adjacency[b].pop(a)
+    adjacency[a][end2] = time * dist(nodeA, newNode) / dist(nodeA, nodeB)
+    adjacency[end2][a] = adjacency[a][end2]
+    adjacency[b][end2] = time * dist(nodeB, newNode) / dist(nodeA, nodeB)
+    adjacency[end2][b] = adjacency[b][end2]
+    traffic = roadTraffic[a].pop(b)
+    roadTraffic[b].pop(a)
+    roadTraffic[a][end2] = traffic
+    roadTraffic[end2][a] = roadTraffic[a][end2]
+    roadTraffic[b][end2] = traffic
+    roadTraffic[end2][b] = roadTraffic[b][end2]
+    newPopulations[-1] += traffic / 2
+    
+  else:
+    print('No intersection, hooking up node %d' % end2)
+    newNode = allNodes[-1]
+  # assign the intended road
+  time = dist(node1, newNode)
+  if end1 not in adjacency:
+    adjacency[end1] = {}
+    roadTraffic[end1] = {}
+  adjacency[end1][end2] = time
+  adjacency[end2][end1] = adjacency[end1][end2]
+
+  roadTraffic[end1][end2] = newPop
+  roadTraffic[end2][end1] = roadTraffic[end1][end2]
+
+  assert min(len(a) for a in adjacency.values()) > 0
+  return end2
         
           
 def makeAdjacency(allNodes, majorRoads, minorRoads, roadSpeed):
@@ -513,7 +594,45 @@ def placeRandom(allNodes, allRoads, majorRoads, minorRoads, adjacency, roadTraff
       roadTraffic[b] = {a: newPop}
       
       adjacency, _ = makeAdjacency(allNodes, majorRoads, minorRoads, roadSpeed)
-    
-    
+
+
+def cleanMap(allNodes, newPopulations, roadTraffic, threshold=5):
+  # if there are two nodes that are really close together, merge them
+  i = 0
+  while i < len(allNodes):
+    j = i+1
+    while j < len(allNodes):
+      if dist(allNodes[i], allNodes[j]) > threshold:
+        j += 1
+        continue
+      print('Merging %d into %d' % (j,i))
+      node = (allNodes[i] + allNodes[j]) / 2
+      pop = newPopulations[i] + newPopulations[j]
+      
+      for road, traffic in roadTraffic[j].items():
+        if road == i:
+          continue
+        roadTraffic[i][road] = roadTraffic[i].get(road, 0) + traffic
+        roadTraffic[road][i] = roadTraffic[i][road]
+      
+      allNodes.pop(j)
+      newPopulations.pop(j)
+      roadTraffic.pop(j)
+      for road in roadTraffic.values():
+        if j in road:
+          road.pop(j)
+
+      # now need to decrement every number greater than j that appears
+      for k in range(len(allNodes)):
+        if k >= j:
+          roadTraffic[k] = roadTraffic.pop(k+1)
+        for l in range(j, len(allNodes)):
+          if l+1 in roadTraffic[k]:
+            roadTraffic[k][l] = roadTraffic[k].pop(l+1)
+          
+      allNodes[i] = node
+      newPopulations[i] = pop
+    i += 1
+  print('%d nodes remaining' % len(allNodes))
 if __name__ == '__main__':
   main()
