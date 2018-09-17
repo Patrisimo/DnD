@@ -108,12 +108,12 @@ def cycle():
   # Now do demand
   # Each edge demands an amount depending on its length and level
   # 
-  logging.info(productProduced)
+  #logging.info(productProduced)
   production = {}
 
   for n, goods in productProduced.items():
     for g, amts in goods.items():
-      logging.info('%s produces %s %s' % (str(Road.roadSet[n]), str(amts), str(g)))
+      #logging.info('%s produces %s %s' % (str(Road.roadSet[n]), str(amts), str(g)))
       production[g] = listAdd(production.get(g,[]) ,amts)
   logging.info('Production:')
   for g in production:
@@ -124,7 +124,7 @@ def cycle():
   for road in Road.roadSet.values():
     road.reset()
     for g, amts in road.demand().items():
-      logging.info('%s demands %s %s' % (str(road), str(amts), str(g)))
+      #logging.info('%s demands %s %s' % (str(road), str(amts), str(g)))
       demand[g] = listAdd(demand.get(g, []),amts)
   logging.info('Demand')
   for g in demand:
@@ -162,7 +162,7 @@ def cycle():
               elif size > 0:
                 assert orderSize > 0, (orderSize, orderData, str(road), size, mult)
     if orderSize > 0:      
-      logging.info('Fulfilling order of level %d %f %s from %s to %s, only %f will arrive' % (orderData['level'], orderSize / orderData['mult'], str(orderData['type']), str(Road.roadSet[orderData['source']]), str(orderData['target']), orderSize ))
+      #logging.info('Fulfilling order of level %d %f %s from %s to %s, only %f will arrive' % (orderData['level'], orderSize / orderData['mult'], str(orderData['type']), str(Road.roadSet[orderData['source']]), str(orderData['target']), orderSize ))
       path = orderData['source']
       size = orderSize 
       while orderData['prev'][path] > -1:
@@ -190,7 +190,7 @@ def cycle():
   logging.info('Left over data')
   for n, goods in productProduced.items():
     for g, amt in goods.items():
-      logging.info('%s produced extra %s %s' % (str(Road.roadSet[n]), str(amt), str(g)))
+      #logging.info('%s produced extra %s %s' % (str(Road.roadSet[n]), str(amt), str(g)))
       production[g] = listAdd(production.get(g,[]), amt)
   logging.info('Extra Production:')
   for g in production:
@@ -200,7 +200,7 @@ def cycle():
   demand = {}
   for road in Road.roadSet.values():
     for g, amt in road.demand().items():
-      logging.info('%s still demands %s %s' % (str(road), str(amt), str(g)))
+      #logging.info('%s still demands %s %s' % (str(road), str(amt), str(g)))
       demand[g] = listAdd(demand.get(g, []),amt)
   logging.info('Unmet Demand')
   for g in demand:

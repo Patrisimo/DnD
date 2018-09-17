@@ -2,6 +2,7 @@ import logging
 import numpy as np
 from enum import Enum
 import re
+import copy
 logging.basicConfig(level=logging.INFO)
 
 class GoodType(Enum):
@@ -38,7 +39,19 @@ class GoodType(Enum):
     if type(n) is str:
       return GoodType(int(n))
 
+
+class Terrain:
+  terrainSet = {} # vector, threshold
   
+  def __init__(self, nodes, extend=False): # A path of nodes that you aren't allowed to be to the right of
+    self.nodes = [np.array(n) if type(n) is list else n for n in nodes]
+    self.vectors = [ self.nodes[i] - self.nodes[i-1] for i in range(1, len(self.nodes))]
+    self.vectors = [ np.array([-v[0], v[1]]) for v in self.vectors]
+    self.thresholds = [ np.dot(n,v) for n,v in zip(self.nodes[1:], self.vectors)]
+    
+    
+
+      
 class Road:
   roadSet = {}
   roadId = 1
@@ -56,7 +69,8 @@ class Road:
       return CommercialRoad
     if name == str(ResidentialRoad):
       return ResidentialRoad
-  
+    if name == str(CoastRoad):
+      return CoastRoad
   def __init__(self, start, end, pop=0, level=1, id=0):
     logging.info('Creating road from %s to %s' % (str(start), str(end)))
     if start.coord[1] < end.coord[1]:
@@ -80,6 +94,8 @@ class Road:
 
     self.setMaxPop()
     self.supplies = {}
+    self.production = {}
+    self.storage = {}
     self.id = id
     if id != 0:
       assert id not in Road.roadSet
@@ -88,13 +104,17 @@ class Road:
       self.end.addRoad(self)
 
     self.transit = {}
+    self.baseProduction = {}
+    self.baseDemand = {}
+
     assert self.maxPop is not None, (self.level, self.length, str(self))
   def setMaxPop(self):
     raise Exception('setMaxPop not implemented for ' + self.__str__())
     
   def produce(self): # returns a dictionary: good -> level -> amt
     goods = {good: [self.maxPop * multiplier for i in range(self.level)]  for good, multiplier in self.goodsProduced.items()}
-    
+    self.production = goods
+    self.baseProduction = {k:v for k,v in goods.items()}
     return goods
   
   def demand(self):
@@ -155,6 +175,9 @@ class Road:
   
   def reset(self):
     self.supplies = {good: [self.maxPop * multiplier*((self.level - i)**2) for i in range(self.level)] for good, multiplier in self.goodsDemanded.items()}
+    self.baseDemand = copy.deepcopy(self.supplies)
+    self.storage = {}
+    self.produce()
     assert len(self.supplies) > 0, str(self)
     assert min(len(v) for v in self.supplies.values()) == self.level, (str(self), self.supplies)
   
@@ -488,6 +511,28 @@ def listAdd(a,b):
   c.extend(longer[len(c):])
   return c
 
+def listMinus(a,b):
+  c = [i-j for i,j in zip(a,b)]
+  if len(a) > len(b):
+    c.extend(a[len(c):])
+  else:
+    c.extend([-n for n in b[len(c):]])
+  return c
+  
+  
 def listDot(a,b):
   c = [i*j for i,j in zip(a,b)]
   return sum(c) 
+  
+def listDivide(a,b):
+  c = [i/j if j > 0 else np.sign(i) for i,j in zip(a,b)]
+  if len(a) > len(b):
+    c.extend([np.sign(i) for i in a[len(c):]])
+  else:
+    c.extend([0]*len(b[len(c):]))
+  return c
+  
+def listMultiply(a,b):
+  c = [i*j for i,j in zip(a,b)]
+  c.extend([0] * (max(len(a), len(b)) - len(c)))
+  return c
