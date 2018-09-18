@@ -3,7 +3,9 @@ import numpy as np
 from enum import Enum
 import re
 import copy
-logging.basicConfig(level=logging.INFO)
+import random
+#logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.CRITICAL)
 
 class GoodType(Enum):
   EMPLOYMENT = 1 # demanded by industrial, produced by residential
@@ -55,6 +57,7 @@ class Terrain:
 class Road:
   roadSet = {}
   roadId = 1
+  recentlyAdded = []
   
   production = {}
   
@@ -167,6 +170,7 @@ class Road:
       assert self.id not in {r.id for r in self.end.roads}
       self.end.addRoad(self)
       self.reset()
+      Road.recentlyAdded.append(self)
     else:
       raise Warning("Road already added")
   
@@ -231,7 +235,7 @@ class Road:
     pass
   
   def __str__(self):
-    return '%s!%d#%d: %s -> %s' % (re.findall('[a-zA-Z]+Road', str(type(self)))[0], self.id, self.level, str(self.start), str(self.end))
+    return '%s#%dLv%d: %s -> %s' % (re.findall('[a-zA-Z]+Road', str(type(self)))[0], self.id, self.level, str(self.start), str(self.end))
     
   def getAngle(self, start=None):
     if start is None:
@@ -245,6 +249,20 @@ class Road:
       end = self.start
     
     return angle(end, start)
+    
+  def levelUp(self, score):
+    if random.random() > np.exp(min(1,score)):
+      self.level += 1
+  
+  def levelDown(self):
+    self.level -= 1
+    assert self.level > 0, str(self)
+
+  def clearRecents():
+    Road.recentlyAdded = []
+  
+  def getRecents():
+    return list(filter(lambda x: x.id > 0, Road.recentlyAdded))
     
 class SpecialRoad(Road):
   def __init__(self, *args, **kwargs):
@@ -296,6 +314,10 @@ class SpecialRoad(Road):
     logging.info('Special roads do not level up, currently level %d' % self.level)
     pass
         
+        
+  def levelUp(self, score):
+    logging.info('Special roads do not level up')
+    pass
 class TransportRoad(Road):
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
@@ -318,8 +340,8 @@ class TransportRoad(Road):
 class ResidentialRoad(Road):
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
-    self.goodsProduced = {GoodType.EMPLOYMENT: 1, GoodType.CUSTOMER: 0.5}
-    self.goodsDemanded = {GoodType.GOOD: 0.5}
+    self.goodsProduced = {GoodType.EMPLOYMENT: 2, GoodType.CUSTOMER: 1}
+    self.goodsDemanded = {GoodType.GOOD: 1}
     assert not self.maxPop is None, str(self)
     
   def setMaxPop(self):
@@ -377,6 +399,7 @@ class IndustrialRoad(Road):
 class Node:
   nodeSet = {}
   nodeId = 1
+  recentlyAdded = []
   def __init__(self, coord, y=None, road=None, roads=None, id=0):
     if y is None:
       self.coord = np.array(coord)
@@ -395,6 +418,7 @@ class Node:
       assert id not in Node.nodeSet
       Node.nodeSet[id] = self
     self.id = id
+    self.unlocked = True # Can I add roads to this node?
     
   def remove(self):
     logging.info('Removing %s' % str(self))
@@ -450,6 +474,7 @@ class Node:
       logging.info('Adding %s' % str(self))
       Node.nodeId += 1
       Node.nodeSet[self.id] = self
+      Node.recentlyAdded.append(self)
       if not self.bisector is None:
         logging.info('Bisecting %s at %s' % (str(self.bisector), str(self)))
         assert abs(angle(self.bisector.start, self, self.bisector.end) - np.pi/2) - np.pi/2 < 1e-5, (str(self), str(self.bisector), angle(self.bisector.start, self, self.bisector.end))
@@ -468,6 +493,12 @@ class Node:
   
   def __str__(self):
     return '%d!(%5f,%5f)' % (self.id, self.coord[0], self.coord[1])
+  
+  def clearRecents():
+    Node.recentlyAdded = []
+  
+  def getRecents():
+    return list(filter(lambda x: x.id > 0, Node.recentlyAdded))
   
 def dist(a,b):
   if type(a) is Node:

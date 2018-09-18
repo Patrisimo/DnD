@@ -7,15 +7,17 @@ import logging
 from argparse import ArgumentParser
 import json
 import copy
+from timer import Timer
 
-logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.CRITICAL)
 
 def options():
   parser = ArgumentParser()
   
   parser.add_argument('iterations', type=int)
   parser.add_argument('--load')
-  
+  parser.add_argument('--draw-every', default=1, type=int)
   
   return parser.parse_args()
 
@@ -23,26 +25,67 @@ def main():
   ops = options()
   
   if ops.load is None:
-    FILENAME = 'newertest'
-    a = Node(0,0)
-    b = Node(40, 0)
-    c = Node(10, 10)
-    d = Node(100, 90)
-    a.add()
-    b.add()
-    c.add()
-    d.add()
+    # FILENAME = 'newertest'
+    # a = Node(0,0)
+    # b = Node(40, 0)
+    # c = Node(10, 10)
+    # d = Node(100, 90)
+    # a.add()
+    # b.add()
+    # c.add()
+    # d.add()
+    FILENAME = 'losokyo'
+    a1 = Node(0,0)
+    a2 = Node(10,0)
+    a1.add()
+    a1.unlocked = False
+    a2.add()    
+    a2.unlocked = False
     
-    assert a.isActive()
+    b1 = Node(790,0)
+    b2 = Node(800,0)
+    b1.add()
+    b1.unlocked = False
+    b2.add()
+    b2.unlocked = False
+    
+    c1 = Node(400,680)
+    c2 = Node(400,690)
+    c1.add()
+    c1.unlocked = False
+    c2.add()
+    c2.unlocked = False
+    
+    d1 = Node(380, 0)
+    d2 = Node(420, 0)
+    d3 = Node(400, -20)
+    d4 = Node(400, 20)
+    d1.add()
+    d2.add()
+    d3.add()
+    d4.add()
+    
+    WestGate = SpecialRoad(a1, a2)
+    WestGate.create({GoodType.MATERIAL: 40}, {GoodType.GOOD: 40}, 1, 1, 'purple')
+    WestGate.add()
+    EastGate = SpecialRoad(b1, b2)
+    EastGate.create({GoodType.MATERIAL: 40}, {GoodType.GOOD: 40}, 1, 1, 'purple')
+    EastGate.add()
+    Dock = SpecialRoad(c1, c2)
+    Dock.create({GoodType.MATERIAL: 80}, {GoodType.GOOD: 80}, 1, 1, 'navy')
+    Dock.add()
     
     
-    X = SpecialRoad(a,c)
-    X.create({GoodType.MATERIAL: 20}, {GoodType.GOOD: 20}, 1, 1, 'purple')
-    X.add()
-    Y = TransportRoad(c,d)
-    Y.add()
+    # assert a.isActive()
     
-    assert Y in d.roads
+    
+    # X = SpecialRoad(a,c)
+    # X.create({GoodType.MATERIAL: 20}, {GoodType.GOOD: 20}, 1, 1, 'purple')
+    # X.add()
+    # Y = TransportRoad(c,d)
+    # Y.add()
+    
+    # assert Y in d.roads
     startIter = 0
     drawCity('%s.png' % (FILENAME))
   else:
@@ -60,25 +103,36 @@ def main():
         newRoad.create(**road['data'])
       newRoad.reset()
     Road.roadId = max(Road.roadSet.keys())+1  
-  for i in range(startIter, startIter + ops.iterations):
-    cycle()
-    drawCity('%s%02d.png' % (FILENAME, i))
-
-  drawCity('%s_final.png' % FILENAME, clean=True)
-  nodeInfo = [{'coord': n.coord.tolist(), 'id': n.id, 'roads': [r.id for r in n.roads]} for n in Node.nodeSet.values()]
-  roadInfo = [{'start': r.start.id, 'end': r.end.id, 'type': str(type(r)), 'level': r.level, 'data': r.data if type(r) is SpecialRoad else None, 'id': r.id} for r in Road.roadSet.values()]
-    
-  with open('%s.json' % FILENAME, 'w') as file:
-    json.dump({'nodes': nodeInfo, 'roads': roadInfo, 'filename': FILENAME, 'iter': ops.iterations+startIter}, file)
+  try:
+    for iterCount in range(startIter, startIter + ops.iterations):
+      cycle()
+      if iterCount % ops.draw_every == 0:
+        Timer.start('Drawing')
+        drawCity('%s%02d.png' % (FILENAME, iterCount))
+        Timer.stop('Drawing')
+  except KeyboardInterrupt:
+    pass
+  finally:
+    print(Timer.report())
+    print('Saving...')
+    drawCity('%s_final.png' % FILENAME, clean=True)
+    nodeInfo = [{'coord': n.coord.tolist(), 'id': n.id, 'roads': [r.id for r in n.roads]} for n in Node.nodeSet.values()]
+    roadInfo = [{'start': r.start.id, 'end': r.end.id, 'type': str(type(r)), 'level': r.level, 'data': r.data if type(r) is SpecialRoad else None, 'id': r.id} for r in Road.roadSet.values()]
+      
+    with open('%s.json' % FILENAME, 'w') as file:
+      json.dump({'nodes': nodeInfo, 'roads': roadInfo, 'filename': FILENAME, 'iter': iterCount}, file)
     
 def cycle():
   # First, look for two nodes that are close together but not connected 
   # Say, take the pair with the smallest dist(a,b) / roadDist(a,b)
   
+  Timer.start('Cleaning')
   cleanNodes(Node.nodeSet)
   cleanRoads(Road.roadSet)
   split(Road.roadSet)
+  Timer.stop('Cleaning')
   
+  Timer.start('Connecting graph')
   closeRelativeDistance = 0
   attempts = 0
   while attempts < 10:
@@ -92,7 +146,11 @@ def cycle():
       break
   else:
     logging.info('***RAN OUT OF ATTEMPTS***')
+  Road.clearRecents()
+  Node.clearRecents()
+  Timer.stop('Connecting graph')
   
+  Timer.start('Cluster assignment')
   # Now assign clusters
   # First, connect transport roads
   clusterRoads, roadClusters = collectTransportRoads(Road.roadSet)
@@ -108,7 +166,9 @@ def cycle():
         cluster = roadClusters[closestTransport.id]
         clusterRoads[cluster].append(road)
         roadClusters[road.id] = cluster
+  Timer.stop('Cluster assignment')
   
+  Timer.start('Production')
   # Now production
   # First, each road completes its production
   for road in Road.roadSet.values():
@@ -123,7 +183,8 @@ def cycle():
       fractionAmts = [a / len(neighbors) for a in amts]
       for n in neighbors:
         n.production[good] = listAdd(n.production.get(good, []), fractionAmts)
-  
+  Timer.stop('Production')
+  Timer.start('Cluster production')
   # Now each of the transportation roads distributes the resources of their cluster
   clusterResources = {}
   for cluster, roads in clusterRoads.items():
@@ -133,10 +194,10 @@ def cycle():
     excessProduction, excessDemand = distributeResources(roads)
     clusterResources[cluster]['production'] = excessProduction
     clusterResources[cluster]['demand'] = excessDemand
-  
+  Timer.stop('Cluster production')
   # Now look at roads ceasing to be transport roads
   
-  
+  Timer.start('Road management')
   upgradeChoices = []
   downgradeChoices = []
   reskinChoices = []
@@ -149,9 +210,12 @@ def cycle():
       transportRoads = list(filter(lambda r: type(r) is TransportRoad, roads))
       downgradeChoices.append(deTransport(transportRoads, roads, clusterResources[cluster]))
       upgradeChoices.append(reTransport(transportRoads, roads, clusterResources[cluster], clusterResources, roadClusters))
-      reskinChoices.append(reskin(roads, clusterResources[cluster]))
+      reskinChoice, levelUpChoice = reskin(roads, clusterResources[cluster])
+      reskinChoices.append(reskinChoice)
+      Road.roadSet[levelUpChoice[0]].levelUp(levelUpChoice[1])
     
-    
+  Timer.stop('Road management')  
+  Timer.start('Changing a road')
   # only do one of upgrade/downgrade/reskin
   choice = random.random() * 3
   
@@ -199,7 +263,8 @@ def cycle():
       logging.info('Changing road %s to %s' % (str(luckyRoad), str(newType)))
       convert(luckyRoad, newType)
   
-  
+  Timer.stop('Changing a road')
+  Timer.start('Resource counting')
   # Now to figure out what resource was lacking the most
   resources = {}
   for cluster, output in clusterResources.items():
@@ -218,6 +283,8 @@ def cycle():
   
   bestGood, amt = sorted(resources.items(), key=lambda x: abs(x[1][0]))[-1]
   amt = amt[0]
+  Timer.stop('Resource counting')
+  Timer.start('Make a new road')
   logging.info('Remaining goods: %s, %f' % (str(bestGood), amt))
   if abs(amt) > 0:
     if amt < 0:
@@ -239,62 +306,134 @@ def cycle():
     while type(luckyRoad) is SpecialRoad:
       luckyRoad = random.choice(list(Road.roadSet.values()))
     luckyRoad.level += 1
+  Timer.stop('Make a new road')
+  Timer.start('Ending cleanup')
   cleanNodes(Node.nodeSet)
   cleanRoads(Road.roadSet)
-      
+  Timer.stop('Ending cleanup')
+
 def findClosePair(nodeSet, roadSet): # find the node and the (node or edge) that are clsoest together
   logging.info('Finding closest pair of nodes')
   closePair = (None, None)
   closeRelativeDistance = np.infty
   closeDirectDistance = np.infty
-  for id1, node1 in nodeSet.items():
-    distances, prev = dijkstra(id1, nodeSet)
-    logging.info(str(distances))
-    for id2, node2 in nodeSet.items(): # find the closest node
-      if id2 == id1:
-        continue
-      if min([abs(angle(node1, node2) - r.getAngle()) for r in node2.roads], default=np.infty) < 0.7:
-        #logging.info('%s is too collinear with a road coming out of %s' % (node1, node2))
-        continue
-      directDistance = dist(node1, node2)
-      relativeDistance = directDistance / distances[node2.id]
-      if relativeDistance +1e-9 < closeRelativeDistance:
-        logging.info('Found a close pair: %s is close to %s' % (str(node1), str(node2)))
-        closeRelativeDistance = relativeDistance
-        closeDirectDistance = directDistance
-        closePair = (node1, node2)
-      elif relativeDistance == closeRelativeDistance and directDistance + 1e-9< closeDirectDistance:
-        logging.info('Found a more direct close pair: %s is close to %s' % (str(node1), str(node2)))
-        closeRelativeDistance = relativeDistance
-        closeDirectDistance = directDistance
-        closePair = (node1, node2)
-    
-    for id2, road in roadSet.items():
-      pt1, pt2 = road.endpoints
-      
-      if road in node1.roads:
-        continue
-      #logging.info('Road %s not connected to node %s: %s' % (str(road), str(node1), ', '.join(str(r) for r in node1.roads)))
-      if angle(pt1, pt2, node1.coord)*2 < np.pi and angle(pt2, pt1, node1.coord)*2 < np.pi: # we're in between, need to find point of intersection
-        inter, directDistance, closeEndpoint = findIntersection(road, node1)
-        normalDistance = distances[closeEndpoint.id] + dist(closeEndpoint, inter) * road.travelTime() / road.length
-        relativeDistance = directDistance / normalDistance
-        if abs(angle(node1, inter) - road.getAngle()) < 0.1:
-          continue
-        elif relativeDistance + 1e-9 < closeRelativeDistance:
-          logging.info('Found a close pair: %s is close to road %s at %s' % (str(node1), str(road), str(inter)))
-          closeRelativeDistance = relativeDistance
-          closeDirectDistance = directDistance
-          closePair = (node1, inter)
-        elif relativeDistance == closeRelativeDistance and directDistance + 1e-9 < closeDirectDistance:
-          logging.info('Found a more direct close pair: %s is close to road %s at %s' % (str(node1), str(road), str(inter)))
-          closeRelativeDistance = relativeDistance
-          closeDirectDistance = directDistance
-          closePair = (node1, inter)
-    
-        
+  
+  closePair1, closeRelativeDistance1, closeDirectDistance1 = closePair, closeRelativeDistance, closeDirectDistance
+  
+  # Only need to look at nodes that were recently added
+  Timer.start('Recently added nodes')
+  for node1 in Node.getRecents():
+    closePair1, closeRelativeDistance1, closeDirectDistance1 = closeNode(node1, nodeSet, roadSet)
+    if closeRelativeDistance1 < closeRelativeDistance or (closeRelativeDistance1 == closeRelativeDistance and closeDirectDistance1 < closeDirectDistance):
+      logging.info('Master (Node): Found a good pair: %s and %s' % (str(closePair1[0]), str(closePair1[1])))
+      closeRelativeDistance = closeRelativeDistance1
+      closeDirectDistance = closeDirectDistance1
+      closePair = closePair1
+  Timer.stop('Recently added nodes')
+  
+  Timer.start('Recently added roads')
+  for road1 in Road.getRecents():
+    closePair1, closeRelativeDistance1, closeDirectDistance1 = closeRoad(road1, nodeSet, roadSet)
+    if closeRelativeDistance1 < closeRelativeDistance or (closeRelativeDistance1 == closeRelativeDistance and closeDirectDistance1 < closeDirectDistance):
+      logging.info('Master (Road): Found a good pair: %s and %s' % (str(closePair1[0]), str(closePair1[1])))
+      closeRelativeDistance = closeRelativeDistance1
+      closeDirectDistance = closeDirectDistance1
+      closePair = closePair1
+  Timer.stop('Recently added roads')
+  
+
+
   logging.info('Closest pair is %s to %s, with a relative distance of %5f and direct distance of %5f' % (str(closePair[0]), str(closePair[1]), closeRelativeDistance, closeDirectDistance))  
   return closePair, closeRelativeDistance
+  
+  
+def closeNode(node1, nodeSet, roadSet):
+  id1 = node1.id
+  distances, prev = dijkstra(id1, nodeSet)
+  logging.info(str(distances))
+  closePair = (None, None)
+  closeRelativeDistance = np.infty
+  closeDirectDistance = np.infty
+  Timer.start('Node to node')
+  for id2, node2 in nodeSet.items(): # find the closest node
+    if id2 == id1:
+      continue
+    if min([abs(angle(node1, node2) - r.getAngle()) for r in node2.roads], default=np.infty) < 0.7:
+      #logging.info('%s is too collinear with a road coming out of %s' % (node1, node2))
+      continue
+    directDistance = dist(node1, node2)
+    relativeDistance = directDistance / distances[node2.id]
+    if relativeDistance +1e-9 < closeRelativeDistance:
+      logging.info('Node: Found a close pair: %s is close to %s' % (str(node1), str(node2)))
+      closeRelativeDistance = relativeDistance
+      closeDirectDistance = directDistance
+      closePair = (node1, node2)
+    elif relativeDistance == closeRelativeDistance and directDistance + 1e-9< closeDirectDistance:
+      logging.info('Node: Found a more direct close pair: %s is close to %s' % (str(node1), str(node2)))
+      closeRelativeDistance = relativeDistance
+      closeDirectDistance = directDistance
+      closePair = (node1, node2)
+  Timer.stop('Node to node')
+  Timer.start('Node to road')
+  for id2, road in roadSet.items():
+    pt1, pt2 = road.endpoints
+    
+    if road in node1.roads:
+      continue
+    logging.info('Road %s not connected to node %s: %s' % (str(road), str(node1), ', '.join(str(r) for r in node1.roads)))
+    if angle(pt1, pt2, node1.coord)*2 < np.pi and angle(pt2, pt1, node1.coord)*2 < np.pi: # we're in between, need to find point of intersection
+      inter, directDistance, closeEndpoint = findIntersection(road, node1)
+      normalDistance = distances[closeEndpoint.id] + dist(closeEndpoint, inter) * road.travelTime() / road.length
+      relativeDistance = directDistance / normalDistance
+      if abs(angle(node1, inter) - road.getAngle()) < 0.1:
+        continue
+      elif relativeDistance + 1e-9 < closeRelativeDistance:
+        logging.info('Node: Found a close pair: %s is close to road %s at %s' % (str(node1), str(road), str(inter)))
+        closeRelativeDistance = relativeDistance
+        closeDirectDistance = directDistance
+        closePair = (node1, inter)
+      elif relativeDistance == closeRelativeDistance and directDistance + 1e-9 < closeDirectDistance:
+        logging.info('Node: Found a more direct close pair: %s is close to road %s at %s' % (str(node1), str(road), str(inter)))
+        closeRelativeDistance = relativeDistance
+        closeDirectDistance = directDistance
+        closePair = (node1, inter)
+  Timer.stop('Node to road')  
+  return closePair, closeRelativeDistance, closeDirectDistance
+  
+def closeRoad(road, nodeSet, roadSet):
+  id2 = road.id
+  pt1, pt2 = road.endpoints
+
+  closePair = (None, None)
+  closeRelativeDistance = np.infty
+  closeDirectDistance = np.infty
+  Timer.start('Node to road')
+  for id1, node1 in nodeSet.items(): # find the closest node
+    distances, prev = dijkstra(id1, nodeSet)
+    logging.info(str(distances))
+
+    
+    if road in node1.roads:
+      continue
+    logging.info('Road: Road %s not connected to node %s: %s' % (str(road), str(node1), ', '.join(str(r) for r in node1.roads)))
+    if angle(pt1, pt2, node1.coord)*2 < np.pi and angle(pt2, pt1, node1.coord)*2 < np.pi: # we're in between, need to find point of intersection
+      inter, directDistance, closeEndpoint = findIntersection(road, node1)
+      normalDistance = distances[closeEndpoint.id] + dist(closeEndpoint, inter) * road.travelTime() / road.length
+      relativeDistance = directDistance / normalDistance
+      if abs(angle(node1, inter) - road.getAngle()) < 0.1:
+        continue
+      elif relativeDistance + 1e-9 < closeRelativeDistance:
+        logging.info('Road: Found a close pair: %s is close to road %s at %s' % (str(node1), str(road), str(inter)))
+        closeRelativeDistance = relativeDistance
+        closeDirectDistance = directDistance
+        closePair = (node1, inter)
+      elif relativeDistance == closeRelativeDistance and directDistance + 1e-9 < closeDirectDistance:
+        logging.info('Road: Found a more direct close pair: %s is close to road %s at %s' % (str(node1), str(road), str(inter)))
+        closeRelativeDistance = relativeDistance
+        closeDirectDistance = directDistance
+        closePair = (node1, inter)
+  Timer.stop('Node to road')  
+  return closePair, closeRelativeDistance, closeDirectDistance
   
 def dijkstra(source, nodeSet):
   distances = {i: np.infty for i in nodeSet}
@@ -375,12 +514,22 @@ def findIntersection(road, pt):
       return pt2, d2, pt2
 
 def roadIntersection(end1, end2, road):
+  logging.info('Want road %s to %s, checking intersection with %s' % (str(end1), str(end2), str(road)))
   grad1 = end2.coord - end1.coord
   
   pt1, pt2 = road.start, road.end
   grad2 = pt2.coord - pt1.coord
   
-  t1, t2 = np.linalg.solve(np.vstack([grad1, -grad2]).T, pt1.coord - end1.coord)
+  gradients = np.vstack([grad1, -grad2]).T
+  
+  if np.linalg.det(gradients) == 0:
+    if dist(end2, road.start) < 5:
+      return road.start
+    elif dist(end2, road.end) < 5:
+      return road.end
+    else:
+      return end2
+  t1, t2 = np.linalg.solve(gradients, pt1.coord - end1.coord)
 
   if t1 < 1 and t1 > 0 and t2 <= 1 and t2 >= 0:
     if t2 * road.length < 5:
@@ -400,7 +549,7 @@ def makeRoad(newStart, newEnd, roadSet, roadType): # Adjust newEnd if necessary 
   
   if not newEnd.isActive():
     newEnd.add()
-  assert abs((newStart.coord - newEnd.coord).sum()) > 0, (str(newStart), str(newEnd))
+  assert abs(newStart.coord - newEnd.coord).sum() > 0, (str(newStart), str(newEnd))
   road = roadType(newStart, newEnd)
   if road.length > 5:
     road.add()
@@ -432,7 +581,7 @@ def drawCity(fname, clean=False):
     logging.info(str(n))
     x = scale*(n.coord[0] - upperLeft[0])
     y = scale*(n.coord[1] - upperLeft[1])
-    draw.ellipse([(x-1,y-1), (x+1,y+1)], fill="blue")
+    draw.ellipse([(x-1,y-1), (x+1,y+1)], fill="black")
     if not clean:
       draw.text((x,y-10), str(n.id), fill='black')
   img.save(fname)
@@ -512,7 +661,7 @@ def createNewRoad(roadType, amt):
   
   probs = {}
   for node in Node.nodeSet.values():
-    if len(node.roads) < 5:
+    if len(node.roads) < 5 and node.unlocked:
       probs[node.id] = 1. / len(node.roads)
 
   assert len(probs) > 0, '\n'.join([': '.join((str(n), str(len(n.roads)), '\n'.join(map(str, n.roads)))) for n in Node.nodeSet.values()])
@@ -779,8 +928,9 @@ def marginalSupply(transportRoads, allRoads, resources):
   for rID, demands in roadDemands.items():
     demand = {}
     for good, amts in demands.items():
-      # demand[good] = listDivide(listMinus(resources['production'].get(good, []), amts), normalizer[good])
-      demand[good] = listMinus(resources['production'].get(good, []), amts)
+      badScore = listMultiply(amts, resources['demand'].get(good, []))
+      goodScore = listMultiply(amts, resources['production'].get(good, []))
+      demand[good] = listMinus(badScore, goodScore)
     roadWasteDemand[rID] = demand
       
   return roadWasteDemand, roadWasteSupply
@@ -900,7 +1050,9 @@ def marginalClusterSupply(candidates, transportRoads, allRoads, resources, allRe
     demand = {}
     for good, amts in demands.items():
       # demand[good] = listDivide(listMinus(resources['production'].get(good, []), amts), normalizer[good])
-      demand[good] = listMinus(resources['production'].get(good, []), amts)
+      badScore = listMultiply(amts, resources['demand'].get(good, []))
+      goodScore = listMultiply(amts, resources['production'].get(good, []))
+      demand[good] = listMinus(badScore, goodScore)
     roadWasteDemand[rID] = demand
       
   return roadWasteDemand, roadWasteSupply
@@ -914,9 +1066,12 @@ def makeTransport(roads, roadClusters):
   if len(roads) == 0:
     return (None, -np.infty)
   
+  candidates = list(filter(lambda x: type(x) is not SpecialRoad, roads))
+  if len(candidates) == 0: 
+    return (None, -np.infty)
   isolation = {}
   diversity = {}
-  for road in roads:
+  for road in candidates:
     neighborTypes = {}
     isolation[road.id] = 0
     for neighb in chain(road.start.roads, road.end.roads):
@@ -929,7 +1084,7 @@ def makeTransport(roads, roadClusters):
     diversity[road.id] = sum( p * np.log(p) for p in proportions)
     
   scores = {}
-  for road in roads:
+  for road in candidates:
     scores[road.id] = isolation[road.id] * diversity[road.id]
   
   return sorted(scores.items(), key=lambda x: x[1])[-1]
@@ -949,8 +1104,10 @@ def reskin(roads, resources):
         continue
       elif type(neighb) != type(road):
         alignment[road.id] -= 1
-      else:
+      elif road.level - neighb.level <= 1:
         alignment[road.id] += 1
+      else:
+        alignment[road.id] -= 0.5
   
   
   roadDemands = {} # positive is bad
@@ -980,21 +1137,28 @@ def reskin(roads, resources):
     demand = {}
     for good, amts in demands.items():
       # demand[good] = listDivide(listMinus(resources['production'].get(good, []), amts), normalizer[good])
-      demand[good] = listMinus(resources['production'].get(good, []), amts)
+      badScore = listMultiply(amts, resources['demand'].get(good, []))
+      goodScore = listMultiply(amts, resources['production'].get(good, []))
+      demand[good] = listMinus(badScore, goodScore)
     roadWasteDemand[rID] = demand
   
   scores = {}
   for road in candidates:
     resourceCount = sum(sum(amts) for amts in chain(roadWasteDemand[road.id].values(), roadWasteSupply[road.id].values()))
     scores[road.id] = resourceCount - 100 * alignment[road.id]
-    
-  return sorted(scores.items(), key=lambda x: x[1])[-1]
+  
+  toBeReskinned = sorted(scores.items(), key=lambda x: x[1])
+  
+  return toBeReskinned[-1], toBeReskinned[0]
   
 def convert(road, newType):
   assert type(road) is not SpecialRoad, str(road) 
-  newRoad = newType(road.start, road.end)
-  newRoad.add()
-  road.remove()
+  if road.level > 1:
+    road.levelDown()
+  else:
+    newRoad = newType(road.start, road.end)
+    newRoad.add()
+    road.remove()
   
   
 if __name__ == '__main__':
