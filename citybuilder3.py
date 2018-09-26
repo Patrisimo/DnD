@@ -2,15 +2,18 @@ import numpy as np
 from itertools import chain
 from roadsnodes import *
 import random
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageColor
 import logging
 from argparse import ArgumentParser
 import json
 import copy
 from timer import Timer
+from quadtree import QuadTree
 
-#logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
 logging.basicConfig(level=logging.CRITICAL)
+
+
 
 def options():
   parser = ArgumentParser()
@@ -18,6 +21,8 @@ def options():
   parser.add_argument('iterations', type=int)
   parser.add_argument('--load')
   parser.add_argument('--draw-every', default=1, type=int)
+  parser.add_argument('--no-save', action='store_true', default=False)
+  parser.add_argument('-n', '--name', default='test')
   
   return parser.parse_args()
 
@@ -34,7 +39,10 @@ def main():
     # b.add()
     # c.add()
     # d.add()
-    FILENAME = 'losokyo'
+    tree = QuadTree( (0,0), (1000,1000))
+    Node.tree = tree
+    Road.tree = tree
+    FILENAME = ops.name
     a1 = Node(0,0)
     a2 = Node(10,0)
     a1.add()
@@ -49,8 +57,8 @@ def main():
     b2.add()
     b2.unlocked = False
     
-    c1 = Node(400,680)
-    c2 = Node(400,690)
+    c1 = Node(400,380)
+    c2 = Node(400,390)
     c1.add()
     c1.unlocked = False
     c2.add()
@@ -64,6 +72,11 @@ def main():
     d2.add()
     d3.add()
     d4.add()
+    
+    center = [d1, d3, d2, d4, d1]
+    for i in range(1,5):
+      r = ResidentialRoad(center[i], center[i-1])
+      r.add()
     
     WestGate = SpecialRoad(a1, a2)
     WestGate.create({GoodType.MATERIAL: 40}, {GoodType.GOOD: 40}, 1, 1, 'purple')
@@ -89,44 +102,57 @@ def main():
     startIter = 0
     drawCity('%s.png' % (FILENAME))
   else:
-    with open(ops.load) as file:
-      data = json.load(file)
-    FILENAME = data['filename']
-    startIter = data['iter']
-    for node in data['nodes']:
-      Node(node['coord'], id=node['id'])
-    Node.nodeId = max(Node.nodeSet.keys())+1
-    
-    for road in data['roads']:
-      newRoad = Road.getClass(road['type'])(Node.nodeSet[road['start']], Node.nodeSet[road['end']], level=road['level'], id=road['id'])
-      if type(newRoad) is SpecialRoad:
-        newRoad.create(**road['data'])
-      newRoad.reset()
-    Road.roadId = max(Road.roadSet.keys())+1  
+    FILENAME, startIter = load(ops.load) 
   try:
     for iterCount in range(startIter, startIter + ops.iterations):
       cycle()
       if iterCount % ops.draw_every == 0:
         Timer.start('Drawing')
-        drawCity('%s%02d.png' % (FILENAME, iterCount))
+        drawCity('%s%02d.png' % (FILENAME, iterCount), clean=True, clusters=False)
+        drawCity('%s_clusters%02d.png' % (FILENAME, iterCount), clean=True, clusters=True)
         Timer.stop('Drawing')
   except KeyboardInterrupt:
     pass
   finally:
     print(Timer.report())
     print('Saving...')
-    drawCity('%s_final.png' % FILENAME, clean=True)
+
+    drawCity('%s_final.png' % (FILENAME), clean=True, clusters=False)
+    drawCity('%s_clusters_final.png' % (FILENAME), clean=True, clusters=True)
+
     nodeInfo = [{'coord': n.coord.tolist(), 'id': n.id, 'roads': [r.id for r in n.roads]} for n in Node.nodeSet.values()]
     roadInfo = [{'start': r.start.id, 'end': r.end.id, 'type': str(type(r)), 'level': r.level, 'data': r.data if type(r) is SpecialRoad else None, 'id': r.id} for r in Road.roadSet.values()]
       
     with open('%s.json' % FILENAME, 'w') as file:
-      json.dump({'nodes': nodeInfo, 'roads': roadInfo, 'filename': FILENAME, 'iter': iterCount}, file)
-    
+      json.dump({'nodes': nodeInfo, 'roads': roadInfo, 'filename': FILENAME, 'iter': iterCount, 'treeMin': (Node.tree.minX, Node.tree.minY), 'treeMax': (Node.tree.maxX, Node.tree.maxY)}, file)
+
+def load(filename):
+  with open(filename) as file:
+    data = json.load(file)
+  FILENAME = data['filename']
+  startIter = data['iter']
+  tree = QuadTree( data['treeMin'], data['treeMax'])
+  Node.tree = tree
+  Road.tree = tree
+  for node in data['nodes']:
+    Node(node['coord'], id=node['id'])
+  Node.nodeId = max(Node.nodeSet.keys())+1
+  
+  for road in data['roads']:
+    newRoad = Road.getClass(road['type'])(Node.nodeSet[road['start']], Node.nodeSet[road['end']], level=road['level'])
+    if type(newRoad) is SpecialRoad:
+      newRoad.create(**road['data'])
+    newRoad.add(road['id'])
+    newRoad.reset()
+  Road.roadId = max(Road.roadSet.keys())+1 
+  return FILENAME, startIter
+      
 def cycle():
   # First, look for two nodes that are close together but not connected 
   # Say, take the pair with the smallest dist(a,b) / roadDist(a,b)
   
   Timer.start('Cleaning')
+  assert Node.tree.sanityCheck()
   cleanNodes(Node.nodeSet)
   cleanRoads(Road.roadSet)
   split(Road.roadSet)
@@ -153,19 +179,7 @@ def cycle():
   Timer.start('Cluster assignment')
   # Now assign clusters
   # First, connect transport roads
-  clusterRoads, roadClusters = collectTransportRoads(Road.roadSet)
-  clusterRoads[-1] = []
-  # Now assign every road to a transport road
-  for road in Road.roadSet.values():
-    if road.id not in roadClusters:
-      closestTransport = findTransport(road)
-      if closestTransport is None:
-        clusterRoads[-1].append(road)
-        roadClusters[road.id] = -1
-      else:
-        cluster = roadClusters[closestTransport.id]
-        clusterRoads[cluster].append(road)
-        roadClusters[road.id] = cluster
+  clusterRoads, roadClusters = assignClusters(Node.nodeSet, Road.roadSet)
   Timer.stop('Cluster assignment')
   
   Timer.start('Production')
@@ -201,12 +215,10 @@ def cycle():
   upgradeChoices = []
   downgradeChoices = []
   reskinChoices = []
+  newclusterChoice = makeTransport(clusterRoads[-1], roadClusters)
   
   for cluster, roads in clusterRoads.items():
-    if cluster == -1:
-      upgradeChoices.append(makeTransport(roads, roadClusters))
-      # roads not in a cluster don't get to reskin
-    else:
+    if cluster > -1:
       transportRoads = list(filter(lambda r: type(r) is TransportRoad, roads))
       downgradeChoices.append(deTransport(transportRoads, roads, clusterResources[cluster]))
       upgradeChoices.append(reTransport(transportRoads, roads, clusterResources[cluster], clusterResources, roadClusters))
@@ -217,7 +229,12 @@ def cycle():
   Timer.stop('Road management')  
   Timer.start('Changing a road')
   # only do one of upgrade/downgrade/reskin
-  choice = random.random() * 3
+  if random.random() < len(clusterRoads[-1]) / len(roadClusters):
+    choice = 4
+  else:
+    choice = random.random() * 3
+  #choice = random.choice([0,2])
+  
   
   if choice < 1: # upgrade
     luckyRoad, _ = sorted(upgradeChoices, key=lambda x: x[1])[-1]
@@ -241,7 +258,7 @@ def cycle():
       newType = type(random.choice(neighbs))
       logging.info('Downgrading road %s to %s' % (str(luckyRoad), str(newType)))
       convert(luckyRoad, newType)
-  else: # reskin
+  elif choice < 3: # reskin
     neighbs = []
     i= 1
     newtype = int
@@ -262,7 +279,13 @@ def cycle():
     else:
       logging.info('Changing road %s to %s' % (str(luckyRoad), str(newType)))
       convert(luckyRoad, newType)
-  
+  else: # new cluster
+    luckyRoad, _ = newclusterChoice
+    if luckyRoad is not None:
+      luckyRoad = Road.roadSet[luckyRoad]
+      logging.info('Making new cluster at %s'% str(luckyRoad))
+      convert(luckyRoad, TransportRoad)
+
   Timer.stop('Changing a road')
   Timer.start('Resource counting')
   # Now to figure out what resource was lacking the most
@@ -310,6 +333,7 @@ def cycle():
   Timer.start('Ending cleanup')
   cleanNodes(Node.nodeSet)
   cleanRoads(Road.roadSet)
+  assert Node.tree.sanityCheck()
   Timer.stop('Ending cleanup')
 
 def findClosePair(nodeSet, roadSet): # find the node and the (node or edge) that are clsoest together
@@ -355,7 +379,9 @@ def closeNode(node1, nodeSet, roadSet):
   closeRelativeDistance = np.infty
   closeDirectDistance = np.infty
   Timer.start('Node to node')
-  for id2, node2 in nodeSet.items(): # find the closest node
+  # Gather the nearby nodes
+  nearbyNodes = [(n.id, n) for n in Node.tree.getNode(node1).getPoints(1)]
+  for id2, node2 in nearbyNodes: # find the closest node
     if id2 == id1:
       continue
     if min([abs(angle(node1, node2) - r.getAngle()) for r in node2.roads], default=np.infty) < 0.7:
@@ -375,7 +401,8 @@ def closeNode(node1, nodeSet, roadSet):
       closePair = (node1, node2)
   Timer.stop('Node to node')
   Timer.start('Node to road')
-  for id2, road in roadSet.items():
+  nearbyRoads = [(r.id, r) for r in Node.tree.getNode(node1).getRoads(1)]
+  for id2, road in nearbyRoads:
     pt1, pt2 = road.endpoints
     
     if road in node1.roads:
@@ -402,13 +429,17 @@ def closeNode(node1, nodeSet, roadSet):
   
 def closeRoad(road, nodeSet, roadSet):
   id2 = road.id
-  pt1, pt2 = road.endpoints
+  # pt1, pt2 = road.endpoints
+  pt1, pt2 = road.start, road.end
 
   closePair = (None, None)
   closeRelativeDistance = np.infty
   closeDirectDistance = np.infty
-  Timer.start('Node to road')
-  for id1, node1 in nodeSet.items(): # find the closest node
+  Timer.start('Road to node')
+  Timer.start('Collecting adjacent nodes')
+  nearbyNodes = [(n.id, n) for t in Road.tree.getRoadNodes(road) for n in t.getPoints() ]
+  Timer.stop('Collecting adjacent nodes')
+  for id1, node1 in nearbyNodes: # find the closest node
     distances, prev = dijkstra(id1, nodeSet)
     logging.info(str(distances))
 
@@ -416,7 +447,7 @@ def closeRoad(road, nodeSet, roadSet):
     if road in node1.roads:
       continue
     logging.info('Road: Road %s not connected to node %s: %s' % (str(road), str(node1), ', '.join(str(r) for r in node1.roads)))
-    if angle(pt1, pt2, node1.coord)*2 < np.pi and angle(pt2, pt1, node1.coord)*2 < np.pi: # we're in between, need to find point of intersection
+    if angle(pt1, pt2, node1)*2 < np.pi and angle(pt2, pt1, node1)*2 < np.pi: # we're in between, need to find point of intersection
       inter, directDistance, closeEndpoint = findIntersection(road, node1)
       normalDistance = distances[closeEndpoint.id] + dist(closeEndpoint, inter) * road.travelTime() / road.length
       relativeDistance = directDistance / normalDistance
@@ -432,7 +463,7 @@ def closeRoad(road, nodeSet, roadSet):
         closeRelativeDistance = relativeDistance
         closeDirectDistance = directDistance
         closePair = (node1, inter)
-  Timer.stop('Node to road')  
+  Timer.stop('Road to node')  
   return closePair, closeRelativeDistance, closeDirectDistance
   
 def dijkstra(source, nodeSet):
@@ -490,10 +521,10 @@ def findIntersection(road, pt):
     assert t1 >= 0, (t1, str(pt1), str(pt2), str(pt))
     assert t1 <= 1, (t1, str(pt1), str(pt2), str(pt))
     assert abs(t2) > 1e-14, (t1, str(pt1), str(pt2), str(pt))
-    if t1 * road.length < 10:
+    if t1 * road.length < Road.minLength:
       logging.info('Too close to start node')
       return pt1, dist(pt1, pt), pt1
-    elif (1-t1) * road.length < 10:
+    elif (1-t1) * road.length < Road.minLength:
       logging.info('Too close to end node')
       return pt2, dist(pt2, pt), pt2
     inter = Node(pt1.coord + t1*grad, road=road)
@@ -551,13 +582,12 @@ def makeRoad(newStart, newEnd, roadSet, roadType): # Adjust newEnd if necessary 
     newEnd.add()
   assert abs(newStart.coord - newEnd.coord).sum() > 0, (str(newStart), str(newEnd))
   road = roadType(newStart, newEnd)
-  if road.length > 5:
-    road.add()
-  else:
-    logging.info('Resultant road too short')
+  road.add()
+
   return road
   
-def drawCity(fname, clean=False):
+def drawCity(fname, clean=True, clusters=True):
+
   logging.info('Saving %s' % fname)
   img = Image.new('RGBA', (400,400), (255,255,255,255))
   draw = ImageDraw.Draw(img)
@@ -570,11 +600,23 @@ def drawCity(fname, clean=False):
   upperLeft = np.array([xMin, yMin])
   scale = min(1, 400/(xMax - xMin), 400/(yMax - yMin))
   
+  if clusters:
+    clusterRoads, roadClusters = assignClusters(Node.nodeSet, Road.roadSet)
+    clusterColors = random.choices([c for c in ImageColor.colormap if c != 'black' and min(ImageColor.getrgb(c)) < 170], k=len(clusterRoads)-1)    
+    clusterColors.append('black')
   
   logging.info('Roads:')
   for road in Road.roadSet.values():
     logging.info(str(road))
-    draw.line([tuple(scale*(road.start.coord-upperLeft)), tuple(scale*(road.end.coord-upperLeft))], fill=road.color(), width=int(np.sqrt(2*road.level)))
+    if clusters:
+      color = ImageColor.colormap[clusterColors[roadClusters[road.id]]]
+      if type(road) is TransportRoad:
+        #color = (min(10, color[0]-20), max(10, color[1]-20), max(10, color[2]-20))
+        pass
+      draw.line([tuple(scale*(road.start.coord-upperLeft)), tuple(scale*(road.end.coord-upperLeft))], fill=color, width=int(np.sqrt(2*road.level)))
+    else:
+      draw.line([tuple(scale*(road.start.coord-upperLeft)), tuple(scale*(road.end.coord-upperLeft))], fill=road.color(), width=int(np.sqrt(2*road.level)))
+  
   
   logging.info('\nNodes:')
   for n in Node.nodeSet.values():
@@ -613,10 +655,18 @@ def cleanNodes(nodeSet):
     for id, node2 in nodeSet.items():
       if id == node1.id:
         continue
-      if dist(node1, node2) < 5:
+      assert id > 0, str(node)
+      assert node2.id > 0, str(node)
+      assert id == node2.id, str(node)
+      if dist(node1, node2) < Road.minLength:
         # need to combine
-        nodeList.remove(node2.id)
-        node2.replace(node1)
+        if len(node1.roads) > len(node2.roads):
+          nodeList.remove(node2.id)
+          node2.replace(node1)
+        else:
+          nodeList.remove(node1.id)
+          node1.replace(node2)
+        assert len(nodeList) == len(nodeSet), (len(nodeList), len(nodeSet), id, node1.id, nodeList, nodeSet.keys())
         break
     else:
       i += 1
@@ -719,7 +769,23 @@ def createNewRoad(roadType, amt):
   newRoad = makeRoad(newStart, newEnd, Road.roadSet, roadType)
   newRoad.level = newLevel    
 
-
+def assignClusters(nodeSet, roadSet):
+  # Now assign clusters
+  # First, connect transport roads
+  clusterRoads, roadClusters = collectTransportRoads(roadSet)
+  clusterRoads[-1] = []
+  # Now assign every road to a transport road
+  for road in roadSet.values():
+    if road.id not in roadClusters:
+      closestTransport = findTransport(road)
+      if closestTransport is None:
+        clusterRoads[-1].append(road)
+        roadClusters[road.id] = -1
+      else:
+        cluster = roadClusters[closestTransport.id]
+        clusterRoads[cluster].append(road)
+        roadClusters[road.id] = cluster
+  return clusterRoads, roadClusters
         
 def collectTransportRoads(roadSet):
   clusterRoads = {}
@@ -938,6 +1004,16 @@ def marginalSupply(transportRoads, allRoads, resources):
 def deTransport(transportRoads, allRoads, resources):
   loops = findLoops(transportRoads) # transport roads that are part of a loop will want to die
   # also roads that don't supply much
+  # also give a multiplier based on how spread out the cluster is
+  
+  randomNodes = set([r.start for r in random.choices(allRoads, k=10)])
+  distances = [dist(a,b) for a in randomNodes for b in randomNodes if b.id > a.id]
+  if len(distances) > 1:
+    mult = max(distances) * len(distances) / sum(distances)
+  else:
+    mult = 1
+  
+  
   wasteDemand, wasteSupply = marginalSupply(transportRoads, allRoads, resources)
   
   scores = {}
@@ -948,7 +1024,7 @@ def deTransport(transportRoads, allRoads, resources):
     # but also subtract off the number of transportRoads it is connected to 
     neighborRoads = sum( type(r) is TransportRoad for r in chain(road.start.roads, road.end.roads))
     scores[road.id] -= neighborRoads
-    
+    scores[road.id] *= mult
   return sorted(scores.items(), key=lambda x: x[1])[-1] # return the transport road that should be demoted
   
 def reTransport(transportRoads, allRoads, resources, allResources, roadClusters):
@@ -1085,7 +1161,7 @@ def makeTransport(roads, roadClusters):
     
   scores = {}
   for road in candidates:
-    scores[road.id] = isolation[road.id] * diversity[road.id]
+    scores[road.id] = isolation[road.id] * diversity[road.id] - road.level
   
   return sorted(scores.items(), key=lambda x: x[1])[-1]
   

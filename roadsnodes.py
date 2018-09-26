@@ -4,7 +4,7 @@ from enum import Enum
 import re
 import copy
 import random
-#logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
 logging.basicConfig(level=logging.CRITICAL)
 
 class GoodType(Enum):
@@ -58,8 +58,9 @@ class Road:
   roadSet = {}
   roadId = 1
   recentlyAdded = []
-  
+  tree = None
   production = {}
+  minLength = 10
   
   def getClass(name):
     if name == str(IndustrialRoad):
@@ -76,20 +77,21 @@ class Road:
       return CoastRoad
   def __init__(self, start, end, pop=0, level=1, id=0):
     logging.info('Creating road from %s to %s' % (str(start), str(end)))
-    if start.coord[1] < end.coord[1]:
+    if start.coord[0] < end.coord[0]: # roads always go left to right
       self.start = start
       self.end = end
-    elif start.coord[1] > end.coord[1]:
+    elif start.coord[0] > end.coord[0]:
       self.start = end
       self.end = start
-    else:
-      if start.coord[0] < end.coord[1]:
+    else: # and down to up if vertical
+      if start.coord[1] < end.coord[1]:
         self.start = start
         self.end = end
       else:
         self.start = end
         self.end = start
     assert self.start != self.end, (str(start), str(end), str(self.start), str(self.end))
+    assert self.start.isBefore(self.end), (str(self.start), str(self.end))
     self.endpoints = (self.start.coord, self.end.coord)
     self.length = dist(self.start.coord, self.end.coord)
     #self.angle = angle(self.end.coord, self.start.coord) # measures angle with [1,0]
@@ -99,12 +101,11 @@ class Road:
     self.supplies = {}
     self.production = {}
     self.storage = {}
-    self.id = id
-    if id != 0:
-      assert id not in Road.roadSet
-      Road.roadSet[id] = self
-      self.start.addRoad(self)
-      self.end.addRoad(self)
+    self.id = 0
+
+      # Road.roadSet[id] = self
+      # self.start.addRoad(self)
+      # self.end.addRoad(self)
 
     self.transit = {}
     self.baseProduction = {}
@@ -152,6 +153,7 @@ class Road:
   def remove(self):
     logging.info('Removing %s' % str(self))
     if self.id != 0:
+      Road.tree.removeRoad(self)
       Road.roadSet.pop(self.id)
       self.start.removeRoad(self)
       if self in self.end.roads: # in case start == end
@@ -160,9 +162,9 @@ class Road:
     else:
       raise Warning("Road already removed")
 
-  def add(self):
+  def add(self, id=None):
     if self.id == 0:
-      self.id = Road.roadId
+      self.id = Road.roadId if id is None else id
       Road.roadId += 1
       Road.roadSet[self.id] = self
       logging.info('Adding %s' % str(self))
@@ -171,6 +173,7 @@ class Road:
       self.end.addRoad(self)
       self.reset()
       Road.recentlyAdded.append(self)
+      Road.tree.addRoad(self)
     else:
       raise Warning("Road already added")
   
@@ -400,6 +403,8 @@ class Node:
   nodeSet = {}
   nodeId = 1
   recentlyAdded = []
+  tree = None
+  
   def __init__(self, coord, y=None, road=None, roads=None, id=0):
     if y is None:
       self.coord = np.array(coord)
@@ -414,10 +419,10 @@ class Node:
     else:
       self.roads = roads
     self.storage = {}
+    self.id = 0
     if id != 0:
       assert id not in Node.nodeSet
-      Node.nodeSet[id] = self
-    self.id = id
+      self.add(id)
     self.unlocked = True # Can I add roads to this node?
     
   def remove(self):
@@ -427,6 +432,7 @@ class Node:
     elif self.id == 0:
       raise Warning('Node already removed')
     elif len(self.roads) == 0:
+      Node.tree.removePoint(self)
       Node.nodeSet.pop(self.id)
       self.id = 0
     else:
@@ -438,13 +444,15 @@ class Node:
     assert self.id != other.id
     logging.info('Replacing %s with %s' % (str(self), str(other)))
     for road in self.roads:
+      logging.info('Adjusting road %s' % str(road))
+      Node.tree.removeRoad(road)
       if road.start == self:
         road.start = other
       else:
         road.end = other
       
       road.length = dist(road.start, road.end)
-
+      Node.tree.addRoad(road)
       if road.length < 1e-9:
         road.remove()
       else:
@@ -452,8 +460,7 @@ class Node:
         #road.angle = angle(road.start, road.end)
         other.addRoad(road)
     self.roads = []
-    Node.nodeSet.pop(self.id)
-    self.id = 0
+    self.remove()
 
   def addRoad(self, road):
     logging.info('Adding road %s to %s' % (str(road), str(self)))
@@ -468,13 +475,15 @@ class Node:
       logging.info('Orphaned')
       self.remove()
   
-  def add(self):
+  def add(self, id=None):
     if self.id == 0:
-      self.id = Node.nodeId
+      self.id = Node.nodeId if id is None else id
       logging.info('Adding %s' % str(self))
       Node.nodeId += 1
       Node.nodeSet[self.id] = self
+      assert not Node.tree.contains(self), str(self)
       Node.recentlyAdded.append(self)
+      Node.tree.addPoint(self)
       if not self.bisector is None:
         logging.info('Bisecting %s at %s' % (str(self.bisector), str(self)))
         assert abs(angle(self.bisector.start, self, self.bisector.end) - np.pi/2) - np.pi/2 < 1e-5, (str(self), str(self.bisector), angle(self.bisector.start, self, self.bisector.end))
@@ -494,11 +503,26 @@ class Node:
   def __str__(self):
     return '%d!(%5f,%5f)' % (self.id, self.coord[0], self.coord[1])
   
+  def isBefore(self, other):
+    if self.coord[0] < other.coord[0]:
+      return True
+    elif self.coord[0] > other.coord[0]:
+      return False
+    else:
+      if self.coord[1] < other.coord[1]:
+        return True
+      elif self.coord[1] > other.coord[1]:
+        return False
+      else:
+        raise Exception()
+        
   def clearRecents():
     Node.recentlyAdded = []
   
   def getRecents():
     return list(filter(lambda x: x.id > 0, Node.recentlyAdded))
+  
+  
   
 def dist(a,b):
   if type(a) is Node:
@@ -509,12 +533,15 @@ def dist(a,b):
 
 def angle(a,b,c=None): # computes the angle <ABC (between 0 and pi), if c is ommitted then computes counterclockwise angle with horizontal
   full = False
+  nodes = []
   if c is None:
     if type(a) is Node:
+      nodes = [a,b]
       a,b = a.coord, b.coord
     c = b + np.array([1,0])
     full = True
   elif type(a) is Node:
+    nodes = [a,b,c]
     a,b,c = a.coord, b.coord, c.coord
 
   assert type(a) is np.ndarray
@@ -523,8 +550,8 @@ def angle(a,b,c=None): # computes the angle <ABC (between 0 and pi), if c is omm
   
   side1 = a - b
   side2 = c - b
-  assert dist(side1, 0) * dist(side2, 0) > 0, (a,b,c)
-  assert abs(np.dot(side1, side2)) < dist(side1,0) * dist(side2,0) + 1e-5, (a,b,c)
+  assert dist(side1, 0) * dist(side2, 0) > 0, ('; '.join(map(str,nodes)), a,b,c)
+  assert abs(np.dot(side1, side2)) < dist(side1,0) * dist(side2,0) + 1e-5, ('; '.join(map(str,nodes)), a,b,c)
   
   angle_ = np.arccos( min(1, max(-1, np.dot(side1, side2) / (dist(side1, 0) * dist(side2, 0)))))
 
