@@ -15,7 +15,7 @@ class QuadTree:
  
   # This is a quadtree where a node either has data or children
   # A leaf will have at most 20 datapoints
-  maxSize = 10
+  maxSize = 5
   
   order = [2, 1, 3, 0]
   roadNodes = {}
@@ -276,7 +276,7 @@ class QuadTree:
 
   def removePoint(self, point):
     if self.isLeaf:
-      assert point.id in [p.id for p in self.data]
+      assert point.id in [p.id for p in self.data], (str(point), str(self), '; '.join(map(str,self.data)))
       logging.info('Successfully removed %s from %s' % (str(point), str(self)))
       self.data = list(filter(lambda p: p.id != point.id, self.data))
       self.pointCount -= 1

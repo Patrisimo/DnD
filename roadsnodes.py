@@ -4,6 +4,7 @@ from enum import Enum
 import re
 import copy
 import random
+from timer import Timer
 # logging.basicConfig(level=logging.INFO)
 logging.basicConfig(level=logging.CRITICAL)
 
@@ -483,7 +484,8 @@ class Node:
       Node.nodeSet[self.id] = self
       assert not Node.tree.contains(self), str(self)
       Node.recentlyAdded.append(self)
-      Node.tree.addPoint(self)
+      assert Node.tree.addPoint(self)
+      Timer.start('Bisecting road')
       if not self.bisector is None:
         logging.info('Bisecting %s at %s' % (str(self.bisector), str(self)))
         assert abs(angle(self.bisector.start, self, self.bisector.end) - np.pi/2) - np.pi/2 < 1e-5, (str(self), str(self.bisector), angle(self.bisector.start, self, self.bisector.end))
@@ -494,6 +496,7 @@ class Node:
         road1.add()
         road2.add()
         self.bisector.remove()
+      Timer.stop('Bisecting road')
     else:
       raise Warning("Node already added")
   
