@@ -1,30 +1,54 @@
 import logging
 import numpy as np
 
-#logging.basicConfig(level=logging.INFO)
-logging.basicConfig(level=logging.CRITICAL)
+logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.CRITICAL)
+
 
 class QuadTree:
-  class RoadNode:
-    def __init__(self, road, coords):
-      self.road = road
-      self.coords = coords
-      self.id = road.id
+  def __init__(self, lowerLeft, upperRight):
+    self.root = QuadTreeNode(lowerLeft, upperRight, self)
+    self.roadNodes = {}
+
+  def addPoint(self, point):
+    return self.root.addPoint(point)
     
+  def addRoad(self, road):
+    return self.root.addRoad(road)
     
- 
+  def getRoadNodes(self, road):
+    return self.root.getRoadNodes(road)
+    
+  def getNode(self, point):
+    return self.root.getNode(point)
+    
+  def getPoints(self, parents=0):
+    return self.root.getPoints(parents=parents)
+    
+  def getRoads(self, parents=0):
+    return self.root.getRoads(parents=parents)
+  
+  def contains(self, point):
+    return self.root.contains(point)
+  
+  def removePoint(self, point):
+    return self.root.removePoint(point)
+    
+  def removeRoad(self, road):
+    return self.root.removeRoad(point)
+  
+class QuadTreeNode:
   # This is a quadtree where a node either has data or children
   # A leaf will have at most 20 datapoints
   maxSize = 5
   
   order = [2, 1, 3, 0]
-  roadNodes = {}
   # Children go
   # 1 0
   # 2 3
   
-  def __init__(self, lowerLeft, upperRight, parent=None, name=None):
-    self.root = self
+  def __init__(self, lowerLeft, upperRight, tree, parent=None, name=None):
+    self.tree = tree
     self.parent = parent
     self.isLeaf = True
     self.children = []
@@ -80,7 +104,7 @@ class QuadTree:
       if newMinY is None:
         newMinY = self.minY - (self.maxY - self.minY)
         newMaxY = self.maxY        
-      newMe = QuadTree((self.minX, self.minY), (self.maxX, self.maxY), parent=self)
+      newMe = QuadTree((self.minX, self.minY), (self.maxX, self.maxY), tree=self.tree, parent=self)
       newMe.children = self.children
       newMe.data = self.data
       newMe.roads = self.roads

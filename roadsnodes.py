@@ -5,8 +5,8 @@ import re
 import copy
 import random
 from timer import Timer
-# logging.basicConfig(level=logging.INFO)
-logging.basicConfig(level=logging.CRITICAL)
+logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.CRITICAL)
 
 class GoodType(Enum):
   EMPLOYMENT = 1 # demanded by industrial, produced by residential
@@ -344,7 +344,8 @@ class TransportRoad(Road):
 class ResidentialRoad(Road):
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
-    self.goodsProduced = {GoodType.EMPLOYMENT: 2, GoodType.CUSTOMER: 1}
+    #self.goodsProduced = {GoodType.EMPLOYMENT: 2, GoodType.CUSTOMER: 1}
+    self.goodsProduced = {GoodType.EMPLOYMENT: 5}
     self.goodsDemanded = {GoodType.GOOD: 1}
     assert not self.maxPop is None, str(self)
     
@@ -364,8 +365,9 @@ class ResidentialRoad(Road):
 class CommercialRoad(Road):
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
-    self.goodsProduced = {GoodType.GOOD: 5}
-    self.goodsDemanded = {GoodType.MATERIAL: 1, GoodType.CUSTOMER: 3}
+    self.goodsProduced = {GoodType.GOOD: 3}
+    #self.goodsDemanded = {GoodType.MATERIAL: 1, GoodType.CUSTOMER: 3}
+    self.goodsDemanded = {GoodType.MATERIAL: 1}
     
   def setMaxPop(self):
     self.maxPop = self.level * self.length
@@ -383,8 +385,8 @@ class CommercialRoad(Road):
 class IndustrialRoad(Road):
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
-    self.goodsProduced = {GoodType.MATERIAL: 5}
-    self.goodsDemanded = {GoodType.EMPLOYMENT: 5}
+    self.goodsProduced = {GoodType.MATERIAL: 1}
+    self.goodsDemanded = {GoodType.EMPLOYMENT: 50}
     
   def setMaxPop(self):
     self.maxPop = self.level * self.length

@@ -10,8 +10,8 @@ import copy
 from timer import Timer
 from quadtree import QuadTree
 
-# logging.basicConfig(level=logging.INFO)
-logging.basicConfig(level=logging.CRITICAL)
+logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.CRITICAL)
 
 
 
@@ -709,20 +709,35 @@ def createNewRoad(roadType, amt):
   amt = min(amt, 40)
   logging.info('Creating new %s of length %.3f' % (str(roadType), amt))
   
-  probs = {}
-  for node in Node.nodeSet.values():
-    if len(node.roads) < 5 and node.unlocked:
-      probs[node.id] = 1. / len(node.roads)
+  # probs = {}
+  # for node in Node.nodeSet.values():
+    # if len(node.roads) < 5 and node.unlocked:
+      # probs[node.id] = 1. / len(node.roads)
 
-  assert len(probs) > 0, '\n'.join([': '.join((str(n), str(len(n.roads)), '\n'.join(map(str, n.roads)))) for n in Node.nodeSet.values()])
-  choice = random.random() * sum(v for v in probs.values())
-  assert choice > 0, probs
-  luckyNode = -1
-  while choice > 0:
-    luckyNode, weight = probs.popitem()
-    choice -= weight
+  # assert len(probs) > 0, '\n'.join([': '.join((str(n), str(len(n.roads)), '\n'.join(map(str, n.roads)))) for n in Node.nodeSet.values()])
+  # choice = random.random() * sum(v for v in probs.values())
+  # assert choice > 0, probs
+  # luckyNode = -1
+  # while choice > 0:
+    # luckyNode, weight = probs.popitem()
+    # choice -= weight
   
-  newStart = node.nodeSet[luckyNode]
+  treeNode = Node.tree
+  nodeMatrix = np.array([n.coord for n in Node.nodeSet.values()])
+  n = nodeMatrix.shape[0]
+  center = np.dot(np.ones((n,1)), np.dot(np.ones((1,n))/n, nodeMatrix))
+  centeredNodes = nodeMatrix - center
+  eigs, evecs = np.linalg.eig( np.dot(centeredNodes.T, centeredNodes))
+  eigs, evecs = sorted(zip(eigs,evecs), key=lambda x: x[0])
+  
+  while not treeNode.isLeaf:
+    probs = [ np.dot(evecs[0], [child.middleX, child.middleY]) * eigs[1] /(max(len(child.children),1) *eigs[0] * np.sqrt(child.pointCount)) if child.pointCount > 0 else 0 for child in treeNode.children]
+    treeNode = np.random.choice(treeNode.children, p=[p/sum(probs) for p in probs])
+  
+  newStart = random.choice(treeNode.data)
+  
+  
+  #newStart = node.nodeSet[luckyNode]
   logging.info('Putting road on %s' % (str(newStart)))
   # choose a direction that is pretty far from the other nodes coming out
   logging.info('Other roads are: %s' % ', '.join(map(str,newStart.roads)))
@@ -1179,7 +1194,7 @@ def reskin(roads, resources):
       if type(neighb) is TransportRoad:
         continue
       elif type(neighb) != type(road):
-        alignment[road.id] -= 1
+        alignment[road.id] -= 5
       elif road.level - neighb.level <= 1:
         alignment[road.id] += 1
       else:
