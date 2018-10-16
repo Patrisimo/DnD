@@ -24,6 +24,7 @@ Battle music:
 -Fire Emblem Awakening: Agression
 -Pokemon Conquest: Fighting Battle
 -FEA: Annihilation
+-SoV: Calamity's Advent
 
 Epic battle music:
 -Team Plasma Grunt (BW)
@@ -68,6 +69,18 @@ Suspense music:
 -FEA: Storm Clouds
 -FEA: We'd best prepare for battle, just to be safe
 -EU4: Off to war
+
+Disquieting music:
+-SoV: Undercurrents, the Slumbering Labyrinth, Forest of Wandering
+-ORAS: Sealed Chamber Music
+-SuMo: Cave Music
+
+Eccentric music:
+-Eccentric 2007
+-PLvAA Naive People
+
+
+Can use BW layered victory road music for suspenseful cavern, or for a neat end to a suspenseful arc where items they collect build up their ability to fight the final boss.
 
 In Lucina's future, Grima is ressurected and all of the Shepherds are killed. Grima, however, is careful and slowly builds up his power, particularly given the weakened state of Plegia after the two successive wars. During this time, he sends a force to Cohdopia and seizes Tiki's dragonstone, forcing her to travel to Ylisstol to ask Lucina for help.
 First oneshot:
