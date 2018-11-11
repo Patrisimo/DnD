@@ -106,14 +106,18 @@ def connectWithoutNewRoads(oldNodes, oldRoads, roadSpeed=5):
     junct = None
     time = dist(node, dest)
     roadIndex = -1
+    bestIsEndpoint = False
     for i,(end1,end2) in enumerate(roads):
       result = roadDistance(node, allNodes[end1], allNodes[end2], roadSpeed)
       if result[1] < time:
         junct, time, isEndpoint = result
         roadIndex = i
+        bestIsEndpoint = isEndpoint
     connectedToZero.add(nodeIndex)
     if junct is None:
       dirtRoads.append( (nodeIndex, destIndex))
+    elif bestIsEndpoint:
+      if dirtRoads.append()
     else:
       junctIndex = len(allNodes)
       allNodes.append(junct)

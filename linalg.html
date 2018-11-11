@@ -1,0 +1,567 @@
+<!DOCTYPE HTML>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<html>
+<head>
+<style>
+
+.a {
+  border: 2px solid red;
+}
+.b {
+  border: 2px solid coral;
+}
+.c {
+  border: 2px solid gold;
+}
+.d {
+  border: 2px solid darkgreen;
+}
+.e {
+  border: 2px solid blue;
+}
+.f {
+  border: 2px solid indigo;
+}
+input {
+  text-align: center;
+}
+
+tr.divider {
+  border-bottom: 1px solid black;
+}
+
+td.placeholder {
+  width: 20px;
+}
+</style>
+<script>
+
+function validate(a,b) {
+  var c = parseInt(document.getElementById(a).value);
+  if (isNaN(c) || c < b)
+    document.getElementById(a).value = b;
+}
+
+function reset() {
+  var defaults = [5,6,4,1,0,1];
+  var alpha = ['a','b','c','d','e','f'];
+  for (var i=0;i<6;i++) {
+    document.getElementById("f"+i).value = defaults[i];
+    for (var j=1;j<5;j++) {
+      document.getElementById(alpha[j] + i).value = "d" + (2*j+2);
+    }
+  }
+}
+
+function go() {
+  var matrix = [];
+  var alpha = ['a','b','c','d','e','f'];
+  var tries = 0
+  var rolls = new Array(24);
+  do {
+    console.log("generating matrix")
+    for (var i=0;i<6;i++) {
+      matrix[i] = new Array(6);
+      matrix[i][0] = parseInt(document.getElementById(alpha[0] + i).value);
+      matrix[i][5] = parseInt(document.getElementById(alpha[5] + i).value);
+      for (var j=1;j<5;j++) {
+        roll = Math.floor(Math.random() * (1+2*j))+1;
+        rolls[4*i+j-1] = roll;
+        matrix[i][j] = roll;
+      }
+    }
+    for (var i=0;i<6;i++) {
+      for (var j=0;j<i;j++) {
+        var k = matrix[i][j];
+        matrix[i][j] = matrix[j][i];
+        matrix[j][i] = k;
+      }
+    }
+    //console.log(matrix[0] + "\n" + matrix[1] + "\n" + matrix[2] + "\n" + matrix[3] + "\n" + matrix[4] + "\n" + matrix[5]);
+    
+    
+    var cols = reduce(rref(matrix, 0));
+    
+    <!-- Now to figure out how many of each row we need -->
+    // First, find a row with all zeros
+    var free = -1;
+    for (var i=0;i<6;i++) {
+      var isZero = true;
+      for (var j=0;j<6;j++) {
+        if (cols[i][j] != 0)
+          isZero = false;
+      }
+      if (isZero)
+        free = i;
+    }
+    if (free >= 0) { // singular (good) case
+      seenColumns = [free]
+      startWeight = 1;
+      for (var i=0;i<6;i++) {
+        var pivot = -1;
+        for (var j=0;j<6;j++) {
+          if (cols[i][j] != 0) {
+            pivot = j;
+            break
+          }
+        }
+        if (pivot >= 0) {
+          startWeight = startWeight * cols[i][pivot] / gcd(startWeight, cols[i][pivot]);
+        }
+      }
+      weights = new Array(6);
+      weights[5] = startWeight;
+      for (i=0;i<6;i++) {
+        pivot = -1;
+        for (var j=0; j<5;j++) {
+          if (cols[i][j] != 0) {
+            pivot = j;
+          }
+        }
+        if (pivot >= 0) {
+          weights[pivot] = - startWeight * cols[i][5] / cols[i][pivot];
+        } else if (cols[i][5] != 0)
+          weights[pivot] = 1000
+      }
+    } else {
+      weights = [1,2,3,4,5,6]
+    }
+    
+    
+    var max = 0;
+    for (var i=0;i<6;i++) {
+      if (Math.abs(weights[i]) > max)
+        max = Math.abs(weights[i]);
+    }
+    tries += 1;
+  } while (free >= 0  && tries < 3000 && (max > 10 || max < 2));
+  matrix = []
+  for (var i=0; i<6; i++) {
+      matrix[i] = new Array(6);
+      matrix[i][0] = parseInt(document.getElementById(alpha[0] + i).value);
+      matrix[i][5] = parseInt(document.getElementById(alpha[5] + i).value);
+      for (var j=1;j<5;j++) {
+        matrix[i][j] = rolls[4*i+j-1];
+        document.getElementById(alpha[j] + i).value = rolls[4*i+j-1];
+      }
+  }
+  for (var i=0;i<6;i++) {
+    for (var j=0;j<i;j++) {
+      var k = matrix[i][j];
+      matrix[i][j] = matrix[j][i];
+      matrix[j][i] = k;
+    }
+  }
+  if (free < 0)
+    weights = greedy(matrix);
+  
+  console.log("max");
+  console.log(max);
+  console.log("tries");
+  console.log(tries);
+  console.log("weights");
+  console.log(weights);
+  console.log("loss");
+  console.log(computeLoss(matrix, weights))
+  console.log(cols[0] + "\n" + cols[1] + "\n" + cols[2] + "\n" + cols[3] + "\n" + cols[4] + "\n" + cols[5]);
+
+  
+  console.log(matrix[0] + "\n" + matrix[1] + "\n" + matrix[2] + "\n" + matrix[3] + "\n" + matrix[4] + "\n" + matrix[5]);
+  
+  // Now create the scales
+  loss = computeLoss(matrix, weights);
+  
+  leftCount = 0
+  rightCount = 0
+  for (var i=0;i<0;i++) {
+    if (weights[i] > 0)
+      leftCount += 1;
+    else if (weights[i] < 0)
+      rightCount += 1
+  }
+  
+  // I want the two sides to be balanced
+  
+  buffer1 = Math.floor(3-leftCount/2);
+  buffer2 = 6-buffer1 -leftCount-1;
+  buffer3 = Math.floor(3-rightCount/2)-1;
+  buffer4 = 6-buffer2 -rightCount-2;
+  
+  // actually do this by creating html objects and manipulating them
+  for (var i=0;i<6;i++) {
+    thisDiv = document.getElementById('balance' + i);
+    thisDiv.innerHTML = ""
+    center = document.createElement("center")
+    p = document.createElement('p')
+    p.innerHTML = "Balance " + (i+1) 
+    center.appendChild(p)
+    
+    table = document.createElement('table')
+    table.border = '1'
+    tr = document.createElement('tr')
+
+    for (var j=0;j<6;j++) {
+      td = document.createElement('td')
+      td.className = ""+j;
+      td.innerHTML = '<input type="text", maxlength="3", size="3", disabled="true", value="' + matrix[i][j] + '">';
+      tr.appendChild(td)
+    }
+    table.appendChild(tr);
+    center.appendChild(table)
+  
+    
+    
+    // table listing where the weights go
+    rows = listAbsMax(weights);
+    console.log("Filling with " + rows + " rows")
+    table = document.createElement("table")
+    table.border="0"
+    
+    for (var k=0;k<rows;k++) {
+      tr = document.createElement("tr");
+      
+      for (var j=0;j<buffer1;j++) {
+        td = document.createElement("td");
+        td.className = "placeholder"
+        tr.appendChild(td)
+      }
+      for (var j=0;j<6;j++) {
+        if (weights[j] > 0) {
+          td = document.createElement("td");
+          if (weights[j] + k >= rows)
+            td.className=""+j;
+            td.innerHTML = '<input type="text", maxlength="3", size="3", disabled="true", value="' + matrix[i][j] + '">'
+          tr.appendChild(td)
+        }
+      }
+      for (var j=0;j<buffer2;j++) {
+        td = document.createElement("td");
+        td.className = "placeholder"
+        tr.appendChild(td)
+      }
+      
+      td = document.createElement("td");
+      td.className = "middle"
+      td.innerHTML = 'middle'
+      tr.appendChild(td)
+      
+      for (var j=0;j<buffer3;j++) {
+        td = document.createElement("td");
+        td.className = "placeholder"
+        tr.appendChild(td)
+      }
+      for (var j=0;j<6;j++) {
+        if (weights[j] < 0) {
+          td = document.createElement("td");
+          if (weights[j] - k <= -rows)
+            td.className=""+j;
+            td.innerHTML = '<input type="text", maxlength="3", size="3", disabled="true", value="' + matrix[i][j] + '">'
+          tr.appendChild(td)
+        }
+      }
+      for (var j=0;j<buffer4;j++) {
+        td = document.createElement("td");
+        td.className = "placeholder"
+        tr.appendChild(td)
+      }
+      table.appendChild(tr)
+    }
+    
+    // ******* Finished placing the boxes, now to add them up
+    tr = document.createElement("tr")
+    tr.className = "divider"
+    <!-- td = document.createElement("td") -->
+    <!-- td.colspan="100%" -->
+    <!-- tr.appendChild(td) -->
+    table.appendChild(tr)
+    table.border
+    tr = document.createElement("tr")
+
+    for (var j=0;j<buffer1;j++) {
+        td = document.createElement("td");
+        td.className = "placeholder"
+        tr.appendChild(td)
+    }
+    for (var j=0;j<6;j++) {
+      if (weights[j] > 0) {
+          td = document.createElement("td");
+          td.className = "" + j
+          td.innerHTML = '<input type="text", maxlength="3", size="3", disabled="true", value="' + (Math.abs(weights[j] * matrix[i][j])) + '">';
+      }
+    }
+    for (var j=0;j<buffer2;j++) {
+        td = document.createElement("td");
+        td.className = "placeholder"
+        tr.appendChild(td)
+    }
+    
+    td = document.createElement("td");
+    td.className = "middle"
+    tr.appendChild(td)
+    
+    for (var j=0;j<buffer3;j++) {
+        td = document.createElement("td");
+        td.className = "placeholder"
+        tr.appendChild(td)
+    }
+    for (var j=0;j<6;j++) {
+      if (weights[j] < 0) {
+          td = document.createElement("td");
+          td.className = "" + j
+          td.innerHTML = '<input type="text", maxlength="3", size="3", disabled="true", value="' + (Math.abs(weights[j] * matrix[i][j])) + '">';
+      }
+    }
+    for (var j=0;j<buffer4;j++) {
+        td = document.createElement("td");
+        td.className = "placeholder"
+        tr.appendChild(td)
+    }
+    table.appendChild(tr)
+    table.appendChild(document.createElement("tr"))
+    table.border = '1'
+    leftSum = 0
+    for (var j=0;j<6;j++) {
+      if (weights[j] > 0)
+        leftSum += Math.abs(weights[j] * matrix[i][j]);
+    }
+    
+    tr = document.createElement("tr")
+    for (var j=0;j<3;j++) {
+      td = document.createElement("td")
+      tr.appendChild(td)
+    }
+    td = document.createElement("td")
+    td.innerHTML = '<input type="text", maxlength="3", size="3", disabled="true", value="' + leftSum + '">'
+    tr.appendChild(td)
+    
+    for (var j=0;j<3;j++) {
+      td = document.createElement("td")
+      tr.appendChild(td)    
+    }
+    
+    for (var j=0;j<3;j++) {
+      td = document.createElement("td")
+      tr.appendChild(td)
+    }
+    td = document.createElement("td")
+    td.innerHTML = '<input type="text", maxlength="3", size="3", disabled="true", value="' + (leftSum-loss[i]) + '">'
+    tr.appendChild(td)
+    
+    for (var j=0;j<3;j++) {
+      td = document.createElement("td")
+      tr.appendChild(td)    
+    }
+    
+    table.appendChild(tr)
+    center.appendChild(table)
+    thisDiv.appendChild(center)
+    //thisDiv.innerHTML = newHTML;
+  }
+  
+}
+
+function rref(matrix, startRow) {
+  if (startRow >= 6) {
+    return matrix;
+  } 
+  startCol = 0;
+  while (startCol < 6 && matrix[startRow][startCol] == 0) {
+    startCol += 1;
+  }
+
+  if (startCol >= 6) {
+    return rref(matrix, startRow+1);
+  }
+  var pivot = matrix[startRow][startCol];
+  for (var j=0;j<6;j++) {
+    <!-- Need to zero out all the other entries -->
+    if (j == startRow) {
+      continue;
+    }
+    other = matrix[j][startCol]
+    divisor = gcd(pivot, other)
+    for (var k=0;k<6;k++) {
+      matrix[j][k] = (matrix[j][k] * pivot - other*matrix[startRow][k]) / divisor;
+    }
+  }
+  <!-- console.log("startRow = " + startRow); -->
+  <!-- console.log("pivot = " + startCol); -->
+  <!-- console.log(matrix[0] + "\n" + matrix[1] + "\n" + matrix[2] + "\n" + matrix[3] + "\n" + matrix[4] + "\n" + matrix[5]); -->
+  return rref(matrix, startRow + 1);
+}
+
+function reduce(matrix) {
+  for (var i=0;i<6;i++) {
+    var divisor = 0;
+    for (var j=0;j<6;j++) {
+      divisor = gcd(divisor, matrix[i][j]);
+    }
+    for (var j=0;j<6;j++) {
+      if (divisor != 0)
+        matrix[i][j] = matrix[i][j] / divisor;
+    }
+  }
+  return matrix;
+}
+
+function gcd(a,b) {
+  if (b==0) {
+    return a;
+  } else {
+    return gcd(b, a%b);
+  }
+}
+
+function greedy(matrix) {
+  best = 100000000
+  tries = 0
+  console.log(matrix[0] + "\n" + matrix[1] + "\n" + matrix[2] + "\n" + matrix[3] + "\n" + matrix[4] + "\n" + matrix[5]);
+  do {
+    tries += 1;
+    weights = new Array(6);
+    for (var i=0;i<6;i++) { 
+      weights[i] = Math.floor(Math.random()*2)-1
+    }
+    loss = computeLoss(matrix, weights);
+    for (var k=0;k<20;k++) { // want to either reduce the biggest, or randomly 
+      console.log("Run k=" + k);
+      console.log("loss:")
+      console.log(loss);
+      console.log("weights:")
+      console.log(weights)
+      if (Math.random() < 0.1) { // randomly adjust weights
+        console.log("random")
+        for (var i=0;i<6;i++) {
+          weights[i] = weights[i] + Math.floor(Math.random()*3-2);
+        }
+      } else {
+        // find the pile that is off by the most
+        worstAmt = 0;
+        for (var i=0;i<6;i++) {
+          if (Math.abs(loss[i]) > Math.abs(worstAmt)) {
+            worstAmt = loss[i];
+            worstIndex = i;
+          }
+        }
+        console.log("worst bin is #" + worstIndex)
+        // find the color that would change it the most
+        heaviest = 10000;
+        for (var j=0;j<6;j++) {
+          if ( Math.abs(worstAmt + matrix[worstIndex][j]) < heaviest || Math.abs(worstAmt - matrix[worstIndex][j]) < heaviest) { // if adding or subtracting one would make the situation better
+            heaviest = Math.min(Math.abs(worstAmt + matrix[worstIndex][j]), Math.abs(worstAmt - matrix[worstIndex][j]));
+            heaviestColor = j;
+          }
+        }
+        console.log("best if we adjust color #" + heaviestColor)
+        if (matrix[worstIndex][heaviestColor] > Math.abs(worstAmt)) {
+          if (worstAmt > 0)
+            weights[heaviestColor] += 1;
+          else
+            weights[heaviestColor] -= 1;
+        } else {
+          if (worstAmt > 0)
+            weights[heaviestColor] -= 1;
+          else
+            weights[heaviestColor] += 1;
+        }
+      }
+      loss = computeLoss(matrix, weights);
+    }
+    totalLoss = listAbsMax(loss);
+    if (totalLoss < best) {
+      best = totalLoss;
+      bestWeights = weights;
+    }
+  } while (tries < 5)
+  return bestWeights;
+}
+
+function listAbsMax(l) {
+  max = Math.abs(l[0]);
+  for (var i=1;i<l.length;i++) {
+    max = Math.max(Math.abs(l[i]), max);
+  }
+  return max;
+}
+
+function computeLoss(matrix, weights) {
+  loss = []
+  for (var i=0;i<6;i++) {
+    amt = 0
+    for (var j=0;j<6;j++) {
+      amt += weights[j] * matrix[i][j];
+    }
+    loss[i] = amt
+  }
+  return loss;
+
+}
+
+</script>
+</head>
+
+<body>
+
+<div id='place'>
+<center>
+<table border='1'>
+<tr>
+<td class="a"><input type="text", id="a0", maxlength="3", size="3", disabled="true", value="1"></td>
+<td class="b"><input type="text", id="b0", maxlength="3", size="3", disabled="true", value="d4"></td>
+<td class="c"><input type="text", id="c0", maxlength="3", size="3", disabled="true", value="d6"></td>
+<td class="d"><input type="text", id="d0", maxlength="3", size="3", disabled="true", value="d8"></td>
+<td class="e"><input type="text", id="e0", maxlength="3", size="3", disabled="true", value="d10"></td>
+<td class="f"><input type="text", id="f0", maxlength="3", size="3", value="5", onchange="validate('f0',5)"></td>
+<td class="a"><input type="text", id="a1", maxlength="3", size="3", disabled="true", value="1"></td>
+<td class="b"><input type="text", id="b1", maxlength="3", size="3", disabled="true", value="d4"></td>
+<td class="c"><input type="text", id="c1", maxlength="3", size="3", disabled="true", value="d6"></td>
+</tr>
+<tr>
+<td class="d"><input type="text", id="d1", maxlength="3", size="3", disabled="true", value="d8"></td>
+<td class="e"><input type="text", id="e1", maxlength="3", size="3", disabled="true", value="d10"></td>
+<td class="f"><input type="text", id="f1", maxlength="3", size="3", value="6", onchange="validate('f1',6)"></td>
+<td class="a"><input type="text", id="a2", maxlength="3", size="3", disabled="true", value="1"></td>
+<td class="b"><input type="text", id="b2", maxlength="3", size="3", disabled="true", value="d4"></td>
+<td class="c"><input type="text", id="c2", maxlength="3", size="3", disabled="true", value="d6"></td>
+<td class="d"><input type="text", id="d2", maxlength="3", size="3", disabled="true", value="d8"></td>
+<td class="e"><input type="text", id="e2", maxlength="3", size="3", disabled="true", value="d10"></td>
+<td class="f"><input type="text", id="f2", maxlength="3", size="3", value="4", onchange="validate('f2',4)"></td>
+</tr>
+<tr>
+<td class="a"><input type="text", id="a3", maxlength="3", size="3", disabled="true", value="1"></td>
+<td class="b"><input type="text", id="b3", maxlength="3", size="3", disabled="true", value="d4"></td>
+<td class="c"><input type="text", id="c3", maxlength="3", size="3", disabled="true", value="d6"></td>
+<td class="d"><input type="text", id="d3", maxlength="3", size="3", disabled="true", value="d8"></td>
+<td class="e"><input type="text", id="e3", maxlength="3", size="3", disabled="true", value="d10"></td>
+<td class="f"><input type="text", id="f3", maxlength="3", size="3", value="1", onchange="validate('f3',1)"></td>
+<td class="a"><input type="text", id="a4", maxlength="3", size="3", disabled="true", value="1"></td>
+<td class="b"><input type="text", id="b4", maxlength="3", size="3", disabled="true", value="d4"></td>
+<td class="c"><input type="text", id="c4", maxlength="3", size="3", disabled="true", value="d6"></td>
+</tr>
+<tr>
+<td class="d"><input type="text", id="d4", maxlength="3", size="3", disabled="true", value="d8"></td>
+<td class="e"><input type="text", id="e4", maxlength="3", size="3", disabled="true", value="d10"></td>
+<td class="f"><input type="text", id="f4", maxlength="3", size="3", value="0", onchange="validate('f4',0)"></td>
+<td class="a"><input type="text", id="a5", maxlength="3", size="3", disabled="true", value="1"></td>
+<td class="b"><input type="text", id="b5", maxlength="3", size="3", disabled="true", value="d4"></td>
+<td class="c"><input type="text", id="c5", maxlength="3", size="3", disabled="true", value="d6"></td>
+<td class="d"><input type="text", id="d5", maxlength="3", size="3", disabled="true", value="d8"></td>
+<td class="e"><input type="text", id="e5", maxlength="3", size="3", disabled="true", value="d10"></td>
+<td class="f"><input type="text", id="f5", maxlength="3", size="3", value="1", onchange="validate('f5',1)"></td>
+</tr>
+</table>
+
+<input type="button", value="Reset", onclick="reset()">
+<input type="button", value="Ready", onclick="go()">
+</center>
+</div>
+
+<div id='balance0'></div>
+<div id='balance1'></div>
+<div id='balance2'></div>
+<div id='balance3'></div>
+<div id='balance4'></div>
+<div id='balance5'></div>
+</body>
+
+</html>
