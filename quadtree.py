@@ -2,13 +2,18 @@ import logging
 import numpy as np
 
 logging.basicConfig(level=logging.INFO)
-#logging.basicConfig(level=logging.CRITICAL)
+# logging.basicConfig(level=logging.CRITICAL)
 
 
 class QuadTree:
   def __init__(self, lowerLeft, upperRight):
     self.root = QuadTreeNode(lowerLeft, upperRight, self)
     self.roadNodes = {}
+  
+  def getMin(self):
+    return (self.root.minX, self.root.minY)
+  def getMax(self):
+    return (self.root.maxX, self.root.maxY)
 
   def addPoint(self, point):
     return self.root.addPoint(point)
@@ -35,7 +40,10 @@ class QuadTree:
     return self.root.removePoint(point)
     
   def removeRoad(self, road):
-    return self.root.removeRoad(point)
+    return self.root.removeRoad(road)
+    
+  def sanityCheck(self):
+    return self.root.sanityCheck()
   
 class QuadTreeNode:
   # This is a quadtree where a node either has data or children
@@ -104,12 +112,14 @@ class QuadTreeNode:
       if newMinY is None:
         newMinY = self.minY - (self.maxY - self.minY)
         newMaxY = self.maxY        
-      newMe = QuadTree((self.minX, self.minY), (self.maxX, self.maxY), tree=self.tree, parent=self)
+      newMe = QuadTreeNode((self.minX, self.minY), (self.maxX, self.maxY), tree=self.tree, parent=self)
       newMe.children = self.children
       newMe.data = self.data
       newMe.roads = self.roads
       newMe.pointCount = self.pointCount
       newMe.roadCount = self.roadCount
+      newMe.isLeaf = self.isLeaf
+      
       
       assert self.parent is None
       self.children = []
@@ -132,7 +142,7 @@ class QuadTreeNode:
       assert point.id not in [p.id for p in self.data], (str(self), str(point), '; '.join(map(str, self.data)))
       self.data.append(point)
       self.pointCount += 1
-      if len(self.data) > QuadTree.maxSize: # We're full
+      if len(self.data) > QuadTreeNode.maxSize: # We're full
         logging.info("Overflow")
         self.makeChildren()
             # Goes
@@ -168,7 +178,7 @@ class QuadTreeNode:
       self.roadCount += 1
       self.roads.append(road)
       if self.isLeaf:
-        QuadTree.roadNodes[road.id] = QuadTree.roadNodes.get(road.id, []) + [self]
+        self.tree.roadNodes[road.id] = self.tree.roadNodes.get(road.id, []) + [self]
       else:
         passThrough = self.whichChildrenRoad(road)
         logging.info([str(n) for n in passThrough])
@@ -180,7 +190,7 @@ class QuadTreeNode:
     return belongs
   def getRoadNodes(self, road):
     nodes = set()
-    for n in QuadTree.roadNodes[road.id]:
+    for n in self.tree.roadNodes[road.id]:
       logging.info('Adding parent of %s' % (str(n)))
       nodes.add(n.parent)
     return nodes
@@ -191,7 +201,7 @@ class QuadTreeNode:
     else:
       return self.whichChild(point).getNode(point)
   
-  def getPoints(self, parents=0):
+  def getPoints(self, parents=0): # return all points that share a grandparent with the current node
     if parents > 0 and self.parent is not None:
       return self.parent.getPoints(parents-1)
     else:
@@ -204,7 +214,72 @@ class QuadTreeNode:
         assert min([p.id for p in points], default=1) > 0, (str(self), '; '.join(map(str, points)))
         return points
   
-  def getRoads(self, parents=0):
+  def getPointsDistance(self, mult=1.5): # return points from nodes whose centers are within 1.5*width of center
+    root = self.tree.root
+    dist = self.width * mult
+    toCheck = [root]
+    points = []
+    while len(toCheck) > 0:
+      node = toCheck.pop() # triangle: d(c,x) >= |d(c,z) - d(x,z)|
+      if np.sqrt((self.middleX - node.middleX)**2 + (self.middleY - node.middlyY)**2) < dist - node.width / np.sqrt(2):
+        if node.isLeaf:
+          points.extend(node.getPoints())
+        else:
+          for c in node.children:
+            toCheck.append(c)
+    return points
+  
+  def getNeighbors(self, reach=1): # return all nodes that border this one (including corners)
+    root = self.tree.root
+    toCheck = [root]
+    neighbors = []
+    while len(toCheck) > 0:
+      node = toCheck.pop()
+      # Can only border if it contains or already borders
+      if ( self.middleX >= node.minX and self.middleX <= node.maxX) and (self.middleY >= node.minY and self.middleY <= node.maxY):
+        # contains
+        if node.isLeaf:
+          neighbors.append(node)
+        else:
+          toCheck.extend(node.children)
+      elif (self.minX == node.maxX or self.maxX == node.minX):
+        # borders on the X, need X to match and 
+        # Possibilities
+        # abxy bad ()()
+        # axby (())
+        # axyb (())
+        # xayb (())
+        # xaby (())
+        # xyab bad ()()
+        ys = sorted(enumerate([self.minY, node.minY, node.maxY]), key=lambda x: -x[1])
+        if ys[2][0] != 1 and ys[1][0] != 0: # actually borders
+          if node.isLeaf:
+            neighbors.append(node)
+          else:
+            toCheck.extend(node.children)
+      elif (self.minY == node.maxY or self.maxY == node.minY):
+        xs = sorted(enumerate([self.minX, self.maxX, node.minX, node.maxX]), key=lambda x: -x[1])
+        if xs[2][0] != 1 and xs[1][0] != 0: # actually borders
+          if node.isLeaf:
+            neighbors.append(node)
+          else:
+            toCheck.extend(node.children)
+          
+    return neighbors
+  
+  def getPointsFromNeighbors(self):
+    points = []
+    for node in self.getNeighbors():
+      points.extend(node.data)
+    return points
+    
+  def getRoadsFromNeighbors(self):
+    roads = []
+    for node in self.getNeighbors():
+      roads.extend(node.roads)
+    return roads
+  
+  def getRoads(self, parents=0): # return all roads that pass through this point and its parents
     if parents > 0 and self.parent is not None:
       return self.parent.getRoads(parents-1)
     elif self.isLeaf:
@@ -214,6 +289,9 @@ class QuadTreeNode:
       for c in self.children:
         roads = roads.union(c.getRoads())
       return roads
+  
+  def getRoadsDistance(self):
+    pass
   
   def contains(self, point):
     n = self.getNode(point)
@@ -228,20 +306,28 @@ class QuadTreeNode:
     self.children = [None] * 4
     for i in range(2):
       for j in range(2):
-        self.children[QuadTree.order[2*i+j]] =  QuadTree( (xVals[i], yVals[j]), (xVals[i+1], yVals[j+1]), parent=self, name=self.name+str(QuadTree.order[2*i+j]))
+        self.children[QuadTreeNode.order[2*i+j]] =  QuadTreeNode( (xVals[i], yVals[j]), (xVals[i+1], yVals[j+1]), parent=self, name=self.name+str(QuadTreeNode.order[2*i+j]), tree=self.tree)
     for d in self.data:
       self.whichChild(d).addPoint(d)
     self.data = []
     for r in self.roads:
-      QuadTree.roadNodes[r.id].remove(self)
+      self.tree.roadNodes[r.id].remove(self)
       for c in self.whichChildrenRoad(r):
         c.addRoad(r)
     self.roads = []
   def addChild(self, child):
     x = int(child.middleX > self.middleX)
     y = int(child.middleY > self.middleY)
-    self.children[QuadTree.order[2*x + y]] = child
-    child.name += str(QuadTree.order[2*x+y])
+    self.children[QuadTreeNode.order[2*x + y]] = child
+    prefix = str(QuadTreeNode.order[2*x+y])
+    insertAt = len(child.name)
+    toFix = [child]
+    while len(toFix) > 0:
+      node = toFix.pop()
+      node.name = node.name[:insertAt] + prefix + node.name[insertAt:]
+      if not node.isLeaf:
+        toFix.extend(node.children)
+    # child.name += str(QuadTreeNode.order[2*x+y])
     
     
     # Children are ABCD, with sides
@@ -253,7 +339,7 @@ class QuadTreeNode:
   def whichChild(self, point):
     xIndex = int(point.coord[0] > self.middleX)
     yIndex = int(point.coord[1] > self.middleY)
-    correct = self.children[QuadTree.order[2*xIndex + yIndex]]
+    correct = self.children[QuadTreeNode.order[2*xIndex + yIndex]]
     logging.info('%s belongs to %s' % (str(point), str(correct)))
     return correct
     # x,y = point.coord
@@ -309,11 +395,11 @@ class QuadTreeNode:
       self.whichChild(point).removePoint(point)
 
   def removeRoad(self, road):
-    for node in QuadTree.roadNodes[road.id]:
+    for node in self.tree.roadNodes[road.id]:
       node.roadCount -= 1
       assert road.id in [r.id for r in node.roads]
       node.roads = list(filter(lambda r: r.id != road.id, node.roads))
-    QuadTree.roadNodes.pop(road.id)
+    self.tree.roadNodes.pop(road.id)
     
   def sanityCheck(self):
     return True

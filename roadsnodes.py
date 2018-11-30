@@ -599,3 +599,7 @@ def listMultiply(a,b):
   c = [i*j for i,j in zip(a,b)]
   c.extend([0] * (max(len(a), len(b)) - len(c)))
   return c
+  
+def closeGreater(a,b):
+  return a > b and not (np.isclose(b,a, atol=1e-6) or np.isclose(a,b,atol=1e-6))
+  

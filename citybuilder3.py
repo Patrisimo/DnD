@@ -11,8 +11,8 @@ from timer import Timer
 from quadtree import QuadTree
 
 logging.basicConfig(level=logging.INFO)
-#logging.basicConfig(level=logging.CRITICAL)
-
+# logging.basicConfig(level=logging.CRITICAL)
+logging.disable(logging.CRITICAL)
 
 
 def options():
@@ -124,7 +124,7 @@ def main():
     roadInfo = [{'start': r.start.id, 'end': r.end.id, 'type': str(type(r)), 'level': r.level, 'data': r.data if type(r) is SpecialRoad else None, 'id': r.id} for r in Road.roadSet.values()]
       
     with open('%s.json' % FILENAME, 'w') as file:
-      json.dump({'nodes': nodeInfo, 'roads': roadInfo, 'filename': FILENAME, 'iter': iterCount, 'treeMin': (Node.tree.minX, Node.tree.minY), 'treeMax': (Node.tree.maxX, Node.tree.maxY)}, file)
+      json.dump({'nodes': nodeInfo, 'roads': roadInfo, 'filename': FILENAME, 'iter': iterCount, 'treeMin': Node.tree.getMin(), 'treeMax': Node.tree.getMax()}, file)
 
 def load(filename):
   with open(filename) as file:
@@ -315,8 +315,10 @@ def cycle():
     else:
       roadType = GoodType.roadDemand(bestGood)
     
-    if random.random() > 0:
+    if random.random() > 0.5:
       createNewRoad(roadType, abs(amt))
+    elif random.random() > 0.01:
+      createNewRoadFillIn(roadType, abs(amt))
     else:
       useful = list(filter(lambda x: type(x) is roadType, Road.roadSet.values()))
       if len(useful) > 0:
@@ -380,11 +382,12 @@ def closeNode(node1, nodeSet, roadSet):
   closeDirectDistance = np.infty
   Timer.start('Node to node')
   # Gather the nearby nodes
-  nearbyNodes = [(n.id, n) for n in Node.tree.getNode(node1).getPoints(1)]
+  nearbyNodes = [(n.id, n) for n in Node.tree.getNode(node1).getPointsFromNeighbors()]
+  logging.info("Looking to connect %s with any of %s" % (str(node1), ', '.join(str(n) for _,n in nearbyNodes)))
   for id2, node2 in nearbyNodes: # find the closest node
     if id2 == id1:
       continue
-    if min([abs(angle(node1, node2) - r.getAngle()) for r in node2.roads], default=np.infty) < 0.7:
+    if np.isclose(dist(node1, node2), 0) or min([abs(angle(node1, node2) - r.getAngle()) for r in node2.roads], default=np.infty) < 0.7:
       #logging.info('%s is too collinear with a road coming out of %s' % (node1, node2))
       continue
     directDistance = dist(node1, node2)
@@ -405,7 +408,7 @@ def closeNode(node1, nodeSet, roadSet):
   for id2, road in nearbyRoads:
     pt1, pt2 = road.endpoints
     
-    if road in node1.roads:
+    if road in node1.roads or np.isclose(dist(node1.coord, pt1),0) or np.isclose(dist(node1.coord, pt2),0):
       continue
     logging.info('Road %s not connected to node %s: %s' % (str(road), str(node1), ', '.join(str(r) for r in node1.roads)))
     if angle(pt1, pt2, node1.coord)*2 < np.pi and angle(pt2, pt1, node1.coord)*2 < np.pi: # we're in between, need to find point of intersection
@@ -437,9 +440,13 @@ def closeRoad(road, nodeSet, roadSet):
   closeDirectDistance = np.infty
   Timer.start('Road to node')
   Timer.start('Collecting adjacent nodes')
-  nearbyNodes = [(n.id, n) for t in Road.tree.getRoadNodes(road) for n in t.getPoints() ]
+  nearbyNodes = [(n.id, n) for t in Road.tree.getRoadNodes(road) for n in t.getPointsFromNeighbors() ]
+  seen = set()
   Timer.stop('Collecting adjacent nodes')
   for id1, node1 in nearbyNodes: # find the closest node
+    if id1 in seen:
+      continue
+    seen.add(id1)
     distances, prev = dijkstra(id1, nodeSet)
     logging.info(str(distances))
 
@@ -514,13 +521,13 @@ def findIntersection(road, pt):
   assert dist(pt1,pt) * dist(pt2, pt) > 0, (str(road), str(pt), road in pt.roads)
   angle1 = angle(pt2, pt1, pt)
   angle2 = angle(pt1, pt2, pt)
-  if angle1 > 0 and angle1*2 < np.pi and angle2 > 0 and angle2*2 < np.pi: # find point of intersection
+  if closeGreater(angle1,0) and closeGreater(np.pi, angle1*2) and closeGreater(angle2,0) and closeGreater(np.pi, angle2*2): # find point of intersection
     grad = pt2.coord - pt1.coord
     perp = np.array([-grad[1], grad[0]])
     t1, t2 = -np.linalg.solve( np.vstack([grad, perp]).T, pt1.coord - pt.coord)
     assert t1 >= 0, (t1, str(pt1), str(pt2), str(pt))
     assert t1 <= 1, (t1, str(pt1), str(pt2), str(pt))
-    assert abs(t2) > 1e-14, (t1, str(pt1), str(pt2), str(pt))
+    assert closeGreater(abs(t2),0), (t1, str(pt1), str(pt2), str(pt))
     if t1 * road.length < Road.minLength:
       logging.info('Too close to start node')
       return pt1, dist(pt1, pt), pt1
@@ -700,8 +707,46 @@ def cleanRoads(roadSet):
       toremove.remove()
     else:
       i += 1
-        
 
+def createNewRoadFillIn(roadType, amt):
+  # New idea (uncomment double comment above to revert)
+  # Choose n random pairs of points, and pick the pair for which the midpoint has the smallest density of points (maybe parent has smallest density)
+  
+  closeDirectDistance = 0
+  attempts = 0
+  while closeDirectDistance < max(amt, Road.minLength) and attempts < 10:
+    attempts += 1
+    bestDensity = np.inf
+    newStart = None
+    for _ in range(20):
+      aRoads = set([0])
+      bRoads = set([0])
+      attempts2 = 0
+      while len(aRoads.intersection(bRoads)) > 0 and attempts2 < 10:
+        attempts2 += 0
+        a, b = random.sample(Node.nodeSet.keys(), 2)
+        aNode = Node.nodeSet[a]
+        bNode = Node.nodeSet[b]
+        aRoads = set([r.id for r in aNode.roads])
+        bRoads = set([r.id for r in bNode.roads])
+      if attempts == 0:
+        continue
+      proposed = Node((aNode.coord + bNode.coord)/2)
+      treeNode = Node.tree.getNode(proposed).parent
+      density = treeNode.pointCount / (treeNode.maxX - treeNode.minX)**2
+      if density < bestDensity:
+        bestDensity = density
+        newStart = proposed
+    
+    # Now I need to figure out where to connect it to
+    (node1, node2), closeRelativeDistance, closeDirectDistance = closeNode(proposed, Node.nodeSet, Road.roadSet)
+    if np.isclose(0, np.square(node2.coord - proposed.coord).sum()): 
+      node1, node2 = node2, node1
+  
+  if closeDirectDistance >= max(amt, Road.minLength):
+    node1.add()
+    makeRoad(node1, node2, Road.roadSet, roadType)
+        
       
 def createNewRoad(roadType, amt):  
 # randomly choose a node with probability proportional to how sparse it is
@@ -722,17 +767,24 @@ def createNewRoad(roadType, amt):
     # luckyNode, weight = probs.popitem()
     # choice -= weight
   
-  treeNode = Node.tree
+  treeNode = Node.tree.root
   nodeMatrix = np.array([n.coord for n in Node.nodeSet.values()])
   n = nodeMatrix.shape[0]
   center = np.dot(np.ones((n,1)), np.dot(np.ones((1,n))/n, nodeMatrix))
   centeredNodes = nodeMatrix - center
   eigs, evecs = np.linalg.eig( np.dot(centeredNodes.T, centeredNodes))
-  eigs, evecs = sorted(zip(eigs,evecs), key=lambda x: x[0])
+
+  eigendata = sorted(zip(eigs,evecs), key=lambda x: x[0])
+  eigs = [v for v,_ in eigendata]
+  evecs = [w for _,w in eigendata]
+
   
   while not treeNode.isLeaf:
-    probs = [ np.dot(evecs[0], [child.middleX, child.middleY]) * eigs[1] /(max(len(child.children),1) *eigs[0] * np.sqrt(child.pointCount)) if child.pointCount > 0 else 0 for child in treeNode.children]
+    probs = [ abs(np.dot(evecs[0], np.array([child.middleX, child.middleY])) * eigs[1] /(max(len(child.children),1) *eigs[0] * np.sqrt(child.pointCount))) if child.pointCount > 0 else 0 for child in treeNode.children]
+
     treeNode = np.random.choice(treeNode.children, p=[p/sum(probs) for p in probs])
+  
+
   
   newStart = random.choice(treeNode.data)
   
@@ -1062,7 +1114,7 @@ def reTransport(transportRoads, allRoads, resources, allResources, roadClusters)
           loopMakers.add(neighb.id)
         
   if len(candidates) == 0:
-    return (None, -np.infy)
+    return (None, -np.inf)
   wasteDemand, wasteSupply = marginalClusterSupply(candidates, transportRoads, allRoads, resources, allResources, roadClusters)
   scores = {}
   for road in candidates:
