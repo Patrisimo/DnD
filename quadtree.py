@@ -86,7 +86,7 @@ class QuadTreeNode:
     newMinX = None
     newMinY = None
     
-    if x < self.minX:
+    if x <= self.minX:
       logging.info('Too far left')
       newMinX = self.minX - (self.maxX - self.minX)
       newMaxX = self.maxX
@@ -95,7 +95,7 @@ class QuadTreeNode:
       newMinX = self.minX
       newMaxX = self.maxX + (self.maxX - self.minX)
         
-    if y < self.minY:
+    if y <= self.minY:
       logging.info('Too far down')
       newMinY = self.minY - (self.maxY - self.minY)
       newMaxY = self.maxY
@@ -169,7 +169,7 @@ class QuadTreeNode:
     x1,x2 = sorted([x1,x2])
     y1,y2 = sorted([y1,y2])
     
-    if x1 > self.maxX or x2 < self.minX or y1 > self.maxY or y2 < self.minY:
+    if x1 > self.maxX or x2 <= self.minX or y1 > self.maxY or y2 <= self.minY:
       belongs = False
 
     logging.info('Belongs? %s' % belongs)
@@ -243,7 +243,7 @@ class QuadTreeNode:
         else:
           toCheck.extend(node.children)
       elif (self.minX == node.maxX or self.maxX == node.minX):
-        # borders on the X, need X to match and 
+        # borders horizontally, need X to match and 
         # Possibilities
         # abxy bad ()()
         # axby (())
@@ -251,13 +251,14 @@ class QuadTreeNode:
         # xayb (())
         # xaby (())
         # xyab bad ()()
-        ys = sorted(enumerate([self.minY, node.minY, node.maxY]), key=lambda x: -x[1])
+        ys = sorted(enumerate([self.minY, self.maxY, node.minY, node.maxY]), key=lambda x: -x[1])
         if ys[2][0] != 1 and ys[1][0] != 0: # actually borders
           if node.isLeaf:
             neighbors.append(node)
           else:
             toCheck.extend(node.children)
       elif (self.minY == node.maxY or self.maxY == node.minY):
+        # borders vertically
         xs = sorted(enumerate([self.minX, self.maxX, node.minX, node.maxX]), key=lambda x: -x[1])
         if xs[2][0] != 1 and xs[1][0] != 0: # actually borders
           if node.isLeaf:
@@ -277,7 +278,7 @@ class QuadTreeNode:
     roads = []
     for node in self.getNeighbors():
       roads.extend(node.roads)
-    return roads
+    return list(set(roads))
   
   def getRoads(self, parents=0): # return all roads that pass through this point and its parents
     if parents > 0 and self.parent is not None:

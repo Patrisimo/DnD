@@ -91,8 +91,8 @@ class Road:
       else:
         self.start = end
         self.end = start
-    assert self.start != self.end, (str(start), str(end), str(self.start), str(self.end))
-    assert self.start.isBefore(self.end), (str(self.start), str(self.end))
+    # assert self.start != self.end, (str(start), str(end), str(self.start), str(self.end))
+    assert not self.end.isBefore(self.start), (str(self.start), str(self.end))
     self.endpoints = (self.start.coord, self.end.coord)
     self.length = dist(self.start.coord, self.end.coord)
     #self.angle = angle(self.end.coord, self.start.coord) # measures angle with [1,0]
@@ -165,6 +165,8 @@ class Road:
 
   def add(self, id=None):
     if self.id == 0:
+      assert not np.isclose(self.length, 0)
+      assert self.start != self.end
       self.id = Road.roadId if id is None else id
       Road.roadId += 1
       Road.roadSet[self.id] = self
@@ -279,7 +281,7 @@ class SpecialRoad(Road):
     self.colorSet = 'purple'
     self.data = None
     self.id
-    
+    self.buildingSize = 10
 
   def setMaxPop(self):
     self.maxPop = self.level * self.length
@@ -327,6 +329,7 @@ class TransportRoad(Road):
     super().__init__(*args, **kwargs)
     self.goodsProduced = {}
     self.goodsDemanded = {GoodType.GOOD: 0.1, GoodType.EMPLOYMENT: 0.1, GoodType.MATERIAL: 0.1}
+    self.buildingSize = 5
     
   def setMaxPop(self):
     self.maxPop = self.level * self.length
@@ -348,6 +351,7 @@ class ResidentialRoad(Road):
     self.goodsProduced = {GoodType.EMPLOYMENT: 5}
     self.goodsDemanded = {GoodType.GOOD: 1}
     assert not self.maxPop is None, str(self)
+    self.buildingSize = 8 # 50 meters
     
   def setMaxPop(self):
     self.maxPop = self.level * self.length
@@ -368,10 +372,11 @@ class CommercialRoad(Road):
     self.goodsProduced = {GoodType.GOOD: 3}
     #self.goodsDemanded = {GoodType.MATERIAL: 1, GoodType.CUSTOMER: 3}
     self.goodsDemanded = {GoodType.MATERIAL: 1}
+    self.buildingSize = 10 # 100 meters
     
   def setMaxPop(self):
     self.maxPop = self.level * self.length
-    assert self.maxPop > 0
+
     
   def transportMultiplier(self):
     return 2. / (2. + self.level)
@@ -387,6 +392,7 @@ class IndustrialRoad(Road):
     super().__init__(*args, **kwargs)
     self.goodsProduced = {GoodType.MATERIAL: 1}
     self.goodsDemanded = {GoodType.EMPLOYMENT: 50}
+    self.buildingSize = 15 # 150 meters
     
   def setMaxPop(self):
     self.maxPop = self.level * self.length
@@ -448,22 +454,24 @@ class Node:
     logging.info('Replacing %s with %s' % (str(self), str(other)))
     for road in self.roads:
       logging.info('Adjusting road %s' % str(road))
-      Node.tree.removeRoad(road)
-      if road.start == self:
-        road.start = other
-      else:
-        road.end = other
       
-      road.length = dist(road.start, road.end)
-      Node.tree.addRoad(road)
-      if road.length < 1e-9:
-        road.remove()
+      
+      if road.start == self:
+        start = other
+        end = road.end
       else:
-        road.setMaxPop()
-        #road.angle = angle(road.start, road.end)
-        other.addRoad(road)
-    self.roads = []
-    self.remove()
+        end = other
+        start = road.start
+      newRoad = type(road)(start, end)
+      if not np.isclose(newRoad.length, 0):
+        newRoad.add()
+      road.remove()
+      
+    
+    if self.id > 0:
+      raise Warning()
+      self.roads = []
+      self.remove()
 
   def addRoad(self, road):
     logging.info('Adding road %s to %s' % (str(road), str(self)))
@@ -475,7 +483,7 @@ class Node:
     assert road.id in {r.id for r in self.roads}, [r.id for r in self.roads]
     self.roads = list(filter(lambda x: x.id != road.id, self.roads))
     if len(self.roads) == 0:
-      logging.info('Orphaned')
+      logging.info('Orphaned: %s' % str(self))
       self.remove()
   
   def add(self, id=None):
@@ -487,6 +495,7 @@ class Node:
       assert not Node.tree.contains(self), str(self)
       Node.recentlyAdded.append(self)
       assert Node.tree.addPoint(self)
+      assert len(Node.nodeSet) == Node.tree.root.pointCount
       Timer.start('Bisecting road')
       if not self.bisector is None:
         logging.info('Bisecting %s at %s' % (str(self.bisector), str(self)))
@@ -519,7 +528,7 @@ class Node:
       elif self.coord[1] > other.coord[1]:
         return False
       else:
-        raise Exception()
+        return False
         
   def clearRecents():
     Node.recentlyAdded = []
@@ -530,7 +539,7 @@ class Node:
   
   
 def dist(a,b):
-  if type(a) is Node:
+  if hasattr(a,'coord'):
     return np.sqrt(np.square(a.coord - b.coord).sum())
   else:
     return np.sqrt(np.square(a-b).sum())    
@@ -540,12 +549,12 @@ def angle(a,b,c=None): # computes the angle <ABC (between 0 and pi), if c is omm
   full = False
   nodes = []
   if c is None:
-    if type(a) is Node:
+    if hasattr(a,'coord'):
       nodes = [a,b]
       a,b = a.coord, b.coord
     c = b + np.array([1,0])
     full = True
-  elif type(a) is Node:
+  elif hasattr(a,'coord'):
     nodes = [a,b,c]
     a,b,c = a.coord, b.coord, c.coord
 
